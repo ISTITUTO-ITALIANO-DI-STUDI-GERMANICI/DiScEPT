@@ -22,23 +22,30 @@ import data from '../Data.js';
 
 export default function EditorView() {
   const monacoRef = React.useRef(null);
-  const [selectedLanguage, setSelectedLanguage] = React.useState(0);
+  const indexRef = React.useRef(-1);
+
+  const [selectedLanguage, setSelectedLanguage] = React.useState(-1);
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
   const [addLanguageDialogShown, setAddLanguageDialogShown] = React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
 
   const loadDocument = index => {
+    indexRef.current = index;
     setSelectedLanguage(index);
     monacoRef.current.getModel().setValue(data.documents[index].body);
   };
 
   function handleEditorDidMount(editor, monaco) {
     monacoRef.current = editor;
-    loadDocument(0);
+    if (data.documents.length) {
+      loadDocument(0);
+    }
   }
 
   function handleEditorChange(value, event) {
-    data.documents[selectedLanguage].body = value;
+    if (indexRef.current !== -1) {
+      data.documents[indexRef.current].body = value;
+    }
   }
 
   function deleteLanguage(language) {
@@ -50,8 +57,17 @@ export default function EditorView() {
   }
 
   function deleteLanguageConfirmed() {
+    const pos = data.documents.findIndex(a => a.language === deletingLanguage);
+
     data.documents = data.documents.filter(a => a.language !== deletingLanguage);
     closeDeleteDialog();
+
+    if (pos === indexRef.current) {
+      indexRef.current = data.documents.length ? 0 : -1;
+    } else if (pos < indexRef.current) {
+      indexRef.current -= 1;
+    }
+    setSelectedLanguage(indexRef.current);
   }
 
   function showAddLanguageDialog() {
