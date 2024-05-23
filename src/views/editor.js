@@ -16,9 +16,27 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from "@mui/material/TextField";
 
-import Editor from "@monaco-editor/react";
-
+import EditorOrMessage from '../components/editorormessage.js';
 import data from '../Data.js';
+
+const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+ <teiHeader>
+  <fileDesc>
+   <titleStmt>
+    <title>${data.project.title} - language: ${language}</title>
+   </titleStmt>
+   <publicationStmt>
+    <p>${language}</p>
+   </publicationStmt>
+  </fileDesc>
+ </teiHeader>
+ <text>
+  <body>
+    <!-- Write something here -->
+  </body>
+ </text>
+</TEI>`;
+
 
 export default function EditorView() {
   const monacoRef = React.useRef(null);
@@ -28,17 +46,23 @@ export default function EditorView() {
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
   const [addLanguageDialogShown, setAddLanguageDialogShown] = React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
+  const [activeEditor, setActiveEditor] = React.useState(false);
 
   const loadDocument = index => {
     indexRef.current = index;
     setSelectedLanguage(index);
-    monacoRef.current.getModel().setValue(data.documents[index].body);
+
+    if (monacoRef.current) {
+      monacoRef.current.getModel().setValue(data.documents[index].body);
+    } else {
+      setActiveEditor(true);
+    }
   };
 
   function handleEditorDidMount(editor, monaco) {
     monacoRef.current = editor;
     if (data.documents.length) {
-      loadDocument(0);
+      loadDocument(indexRef.current);
     }
   }
 
@@ -83,7 +107,7 @@ export default function EditorView() {
 
     const pos = data.documents.findIndex(a => a.language === addingLanguage);
     if (pos === -1) {
-      data.documents.push({language: addingLanguage, body: ''})
+      data.documents.push({language: addingLanguage, body: documentTemplate(addingLanguage)})
       loadDocument(data.documents.length - 1);
     } else {
       loadDocument(pos);
@@ -93,11 +117,7 @@ export default function EditorView() {
   return (
     <Grid container spacing={3}>
       <Grid item xs={9}>
-        <Editor
-          height="90vh"
-          defaultLanguage="xml"
-          onMount={handleEditorDidMount}
-          onChange={handleEditorChange} />
+        <EditorOrMessage message="Please, add the first language." active={activeEditor} onMount={handleEditorDidMount} onChange={handleEditorChange} />
       </Grid>
       <Grid item xs={3}>
         <List>{
