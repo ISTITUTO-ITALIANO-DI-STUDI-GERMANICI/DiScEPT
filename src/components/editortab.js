@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Editor from "@monaco-editor/react";
 
+import data from '../Data.js';
 import CETEIWrapper from './ceteiwrapper.js';
 
 function CustomTabPanel(props) {
@@ -39,35 +40,37 @@ function a11yProps(index) {
   };
 }
 
-export default function EditorTab({ active, message, tei, onMount, onChange }) {
-    const [value, setValue] = React.useState(0);
+export default function EditorTab({ visible, language }) {
+  const [tab, setTab] = React.useState(0);
+  const [content, setContent] = React.useState(data.getDocumentPerLanguage(language) || "");
 
-  if (!active) {
-    return <Typography>{message}</Typography>
+  function handleEditorDidMount(editor, monaco) {
+    editor.getModel().setValue(content);
   }
 
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
+  function handleEditorChange(value, event) {
+    data.updateDocumentPerLanguage(language, value);
+    setContent(value);
+  }
 
   return (
-    <>
+    <div hidden={!visible}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={value} onChange={handleChange} aria-label="editor tab">
+        <Tabs value={tab} onChange={(event, newValue) => setTab(newValue)} aria-label="editor tab">
           <Tab label="Editor" {...a11yProps(0)} />
           <Tab label="Preview" {...a11yProps(1)} />
         </Tabs>
       </Box>
-      <CustomTabPanel value={value} index={0}>
+      <CustomTabPanel value={tab} index={0}>
         <Editor
           height="90vh"
           defaultLanguage="xml"
-          onMount={onMount}
-          onChange={onChange} />
+          onMount={handleEditorDidMount}
+          onChange={handleEditorChange} />
       </CustomTabPanel>
-      <CustomTabPanel value={value} index={1}>
-        <CETEIWrapper tei={tei} />
+      <CustomTabPanel value={tab} index={1}>
+        <CETEIWrapper tei={content} />
       </CustomTabPanel>
-    </>
+    </div>
    );
 }

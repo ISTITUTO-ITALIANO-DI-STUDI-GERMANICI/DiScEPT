@@ -42,43 +42,10 @@ const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.t
 
 
 export default function EditorView() {
-  const monacoRef = React.useRef(null);
-  const languageRef = React.useRef("");
-
-  const [selectedLanguage, setSelectedLanguage] = React.useState(-1);
+  const [selectedLanguage, setSelectedLanguage] = React.useState(null);
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
   const [addLanguageDialogShown, setAddLanguageDialogShown] = React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
-  const [activeEditor, setActiveEditor] = React.useState(false);
-  const [latestContent, setLatestContent] = React.useState("");
-
-  const loadDocument = language => {
-    languageRef.current = language;
-    setSelectedLanguage(language);
-
-    const content = data.getDocumentPerLanguage(language);
-    setLatestContent(content);
-
-    if (monacoRef.current && monacoRef.current.getModel()) {
-      monacoRef.current.getModel().setValue(content);
-    } else {
-      setActiveEditor(true);
-    }
-  };
-
-  function handleEditorDidMount(editor, monaco) {
-    monacoRef.current = editor;
-    if (data.getDocumentPerLanguage(languageRef.current)) {
-      loadDocument(languageRef.current);
-    }
-  }
-
-  function handleEditorChange(value, event) {
-    if (languageRef.current !== "") {
-      data.updateDocumentPerLanguage(languageRef.current, value);
-      setLatestContent(value);
-    }
-  }
 
   function deleteLanguage(language) {
     setDeletingLanguage(language);
@@ -92,11 +59,10 @@ export default function EditorView() {
     data.deleteDocumentPerLanguage(deletingLanguage);
     closeDeleteDialog();
 
-    if (deletingLanguage === languageRef.current) {
+    if (deletingLanguage === selectedLanguage) {
       const languages = data.getDocumentLanguages()
-      languageRef.current = languages.length ? languages[0] : "";
+      setSelectedLanguage(languages.length ? languages[0] : "");
     }
-    setSelectedLanguage(languageRef.current);
   }
 
   function showAddLanguageDialog() {
@@ -112,21 +78,21 @@ export default function EditorView() {
 
     if (!data.getDocumentPerLanguage(addingLanguage)) {
       data.addDocumentPerLanguage(addingLanguage,  documentTemplate(addingLanguage));
+      setSelectedLanguage(addingLanguage);
     }
-
-    loadDocument(addingLanguage);
   }
 
   return (
     <Grid container spacing={3}>
       <Grid item xs={9}>
         <Typography variant="h3" gutterBottom>Edit the content</Typography>
-        <EditorTab
-          message="Please, add the first language."
-          tei={latestContent}
-          active={activeEditor}
-          onMount={handleEditorDidMount}
-          onChange={handleEditorChange} />
+        {
+          data.getDocumentLanguages().map(language => (
+            <EditorTab key={"editortab-" + language}
+              visible={selectedLanguage === language}
+              language={language} />
+          ))
+        }
       </Grid>
       <Grid item xs={3}>
         <List>{
@@ -136,7 +102,7 @@ export default function EditorView() {
                 <DeleteIcon />
               </IconButton>
             }>
-              <ListItemButton onClick={() => loadDocument(language)}
+              <ListItemButton onClick={() => setSelectedLanguage(language)}
                 selected={selectedLanguage === language}>
                 <ListItemText primary={language} />
               </ListItemButton>
