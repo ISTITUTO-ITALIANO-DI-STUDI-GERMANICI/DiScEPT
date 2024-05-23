@@ -6,8 +6,10 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -17,7 +19,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
-import EditorOrMessage from '../components/editorormessage.js';
+import EditorTab from '../components/editortab.js';
 import data from '../Data.js';
 
 const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
@@ -48,13 +50,17 @@ export default function EditorView() {
   const [addLanguageDialogShown, setAddLanguageDialogShown] = React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
   const [activeEditor, setActiveEditor] = React.useState(false);
+  const [latestContent, setLatestContent] = React.useState("");
 
   const loadDocument = language => {
     languageRef.current = language;
     setSelectedLanguage(language);
 
-    if (monacoRef.current) {
-      monacoRef.current.getModel().setValue(data.getDocumentPerLanguage(language));
+    const content = data.getDocumentPerLanguage(language);
+    setLatestContent(content);
+
+    if (monacoRef.current && monacoRef.current.getModel()) {
+      monacoRef.current.getModel().setValue(content);
     } else {
       setActiveEditor(true);
     }
@@ -70,6 +76,7 @@ export default function EditorView() {
   function handleEditorChange(value, event) {
     if (languageRef.current !== "") {
       data.updateDocumentPerLanguage(languageRef.current, value);
+      setLatestContent(value);
     }
   }
 
@@ -114,7 +121,12 @@ export default function EditorView() {
     <Grid container spacing={3}>
       <Grid item xs={9}>
         <Typography variant="h3" gutterBottom>Edit the content</Typography>
-        <EditorOrMessage message="Please, add the first language." active={activeEditor} onMount={handleEditorDidMount} onChange={handleEditorChange} />
+        <EditorTab
+          message="Please, add the first language."
+          tei={latestContent}
+          active={activeEditor}
+          onMount={handleEditorDidMount}
+          onChange={handleEditorChange} />
       </Grid>
       <Grid item xs={3}>
         <List>{
@@ -133,7 +145,10 @@ export default function EditorView() {
           <Divider />
           <ListItem disablePadding>
             <ListItemButton onClick={showAddLanguageDialog}>
-              <ListItemText>Add a new language</ListItemText>
+              <ListItemIcon>
+                <AddIcon />
+              </ListItemIcon>
+              <ListItemText primary="Add a new language" />
             </ListItemButton>
           </ListItem>
         </List>
