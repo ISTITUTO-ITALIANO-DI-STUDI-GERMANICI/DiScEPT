@@ -33,6 +33,8 @@ export default function ProjectView() {
 
   return (
     <Box component="form" noValidate>
+      <Typography variant="h3" gutterBottom>Project base properties</Typography>
+
       {fields.map((field, index) => (
         <Box key={index} component="span" display="block" gap={4} p={2}>
           <TextField

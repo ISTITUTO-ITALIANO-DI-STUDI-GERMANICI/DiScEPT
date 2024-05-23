@@ -5,13 +5,21 @@ import CssBaseline from "@mui/material/CssBaseline";
 
 import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
+import DisceptFileUploader from './components/fileuploader.js';
 
+import IntroView from "./views/intro.js";
 import ProjectView from "./views/project.js";
 import EditorView from "./views/editor.js";
 import AlignmentView from "./views/alignment.js";
-import BuildView from "./views/build.js";
+import FinalView from "./views/final.js";
 
 const steps = [
+  {
+    label: "Intro",
+    description:
+      "Read about this project!",
+    component: IntroView,
+  },
   {
     label: "Project description",
     description:
@@ -32,13 +40,14 @@ const steps = [
   {
     label: "Final steps",
     description: "Create your digital edition.",
-    component: BuildView,
+    component: FinalView,
   },
 ];
 
 export default class App extends React.Component {
   state = {
     currentStep: 0,
+    fileUploaded: null,
   };
 
   render() {
@@ -47,23 +56,33 @@ export default class App extends React.Component {
       return <Component />;
     };
 
+    const changeStep = id => {
+      this.setState({currentStep: id });
+    };
+
+    const fileUploaded = fileUploaded => {
+      this.setState({fileUploaded })
+    };
+
     return (
       <React.Fragment>
         <CssBaseline />
 
-        <DisceptAppBar />
+        <DisceptAppBar fileUploaded={fileUploaded} />
 
         <Grid container spacing={2} sx={{ p: 3 }}>
           <Grid item xs={2}>
             <DisceptStepper
               steps={steps}
-              onChange={(id) => this.setState({ currentStep: id })}
+              onChange={changeStep}
             />
           </Grid>
           <Grid item xs={10}>
             <Item step={this.state.currentStep} />
           </Grid>
         </Grid>
+
+        <DisceptFileUploader fileUploaded={this.state.fileUploaded} onChange={() => changeStep(0) }/>
       </React.Fragment>
     );
   }

@@ -15,6 +15,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 
 import EditorOrMessage from '../components/editorormessage.js';
 import data from '../Data.js';
@@ -40,7 +41,7 @@ const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.t
 
 export default function EditorView() {
   const monacoRef = React.useRef(null);
-  const indexRef = React.useRef(-1);
+  const languageRef = React.useRef("");
 
   const [selectedLanguage, setSelectedLanguage] = React.useState(-1);
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
@@ -48,12 +49,12 @@ export default function EditorView() {
   const [addingLanguage, setAddingLanguage] = React.useState("");
   const [activeEditor, setActiveEditor] = React.useState(false);
 
-  const loadDocument = index => {
-    indexRef.current = index;
-    setSelectedLanguage(index);
+  const loadDocument = language => {
+    languageRef.current = language;
+    setSelectedLanguage(language);
 
     if (monacoRef.current) {
-      monacoRef.current.getModel().setValue(data.documents[index].body);
+      monacoRef.current.getModel().setValue(data.getDocumentPerLanguage(language));
     } else {
       setActiveEditor(true);
     }
@@ -61,14 +62,14 @@ export default function EditorView() {
 
   function handleEditorDidMount(editor, monaco) {
     monacoRef.current = editor;
-    if (data.documents.length) {
-      loadDocument(indexRef.current);
+    if (data.getDocumentPerLanguage(languageRef.current)) {
+      loadDocument(languageRef.current);
     }
   }
 
   function handleEditorChange(value, event) {
-    if (indexRef.current !== -1) {
-      data.documents[indexRef.current].body = value;
+    if (languageRef.current !== "") {
+      data.updateDocumentPerLanguage(languageRef.current, value);
     }
   }
 
@@ -81,17 +82,14 @@ export default function EditorView() {
   }
 
   function deleteLanguageConfirmed() {
-    const pos = data.documents.findIndex(a => a.language === deletingLanguage);
-
-    data.documents = data.documents.filter(a => a.language !== deletingLanguage);
+    data.deleteDocumentPerLanguage(deletingLanguage);
     closeDeleteDialog();
 
-    if (pos === indexRef.current) {
-      indexRef.current = data.documents.length ? 0 : -1;
-    } else if (pos < indexRef.current) {
-      indexRef.current -= 1;
+    if (deletingLanguage === languageRef.current) {
+      const languages = data.getDocumentLanguages()
+      languageRef.current = languages.length ? languages[0] : "";
     }
-    setSelectedLanguage(indexRef.current);
+    setSelectedLanguage(languageRef.current);
   }
 
   function showAddLanguageDialog() {
@@ -105,31 +103,30 @@ export default function EditorView() {
   function addLanguage() {
     closeAddLanguageDialog();
 
-    const pos = data.documents.findIndex(a => a.language === addingLanguage);
-    if (pos === -1) {
-      data.documents.push({language: addingLanguage, body: documentTemplate(addingLanguage)})
-      loadDocument(data.documents.length - 1);
-    } else {
-      loadDocument(pos);
+    if (!data.getDocumentPerLanguage(addingLanguage)) {
+      data.addDocumentPerLanguage(addingLanguage,  documentTemplate(addingLanguage));
     }
+
+    loadDocument(addingLanguage);
   }
 
   return (
     <Grid container spacing={3}>
       <Grid item xs={9}>
+        <Typography variant="h3" gutterBottom>Edit the content</Typography>
         <EditorOrMessage message="Please, add the first language." active={activeEditor} onMount={handleEditorDidMount} onChange={handleEditorChange} />
       </Grid>
       <Grid item xs={3}>
         <List>{
-          data.documents.map((doc, index) => (
-            <ListItem disablePadding key={"list-language-" + index} secondaryAction={
-              <IconButton edge="end" aria-label="delete" onClick={() => deleteLanguage(doc.language)}>
+          data.getDocumentLanguages().map(language => (
+            <ListItem disablePadding key={"list-language-" + language} secondaryAction={
+              <IconButton edge="end" aria-label="delete" onClick={() => deleteLanguage(language)}>
                 <DeleteIcon />
               </IconButton>
             }>
-              <ListItemButton onClick={() => loadDocument(index)}
-                selected={selectedLanguage === index}>
-                <ListItemText primary={doc.language} />
+              <ListItemButton onClick={() => loadDocument(language)}
+                selected={selectedLanguage === language}>
+                <ListItemText primary={language} />
               </ListItemButton>
             </ListItem>
           ))}
