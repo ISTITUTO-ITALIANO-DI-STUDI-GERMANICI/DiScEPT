@@ -1,15 +1,18 @@
 import * as React from "react";
+import CETEIHelper from '../CETEIHelper.js';
 
-export default function CETEIWrapper({tei}) {
-  const initRef = React.useRef(new CETEI());
-  const teiRef = React.useRef("");
-
-  const [content, setContent] = React.useState("");
-
-  if (teiRef.current !== tei) {
-    teiRef.current = tei;
-    initRef.current.makeHTML5(tei, data => setContent(data.outerHTML));
+export default class CETEIWrapper extends React.Component {
+  constructor(props) {
+    super(props);
+    this.contentRef = React.createRef();
   }
 
-  return  <div dangerouslySetInnerHTML={{ __html: content }} />
+  componentDidMount() {
+    this.contentRef.current.innerHTML = "";
+    this.contentRef.current.append(CETEIHelper.CETEI.makeHTML5(this.props.tei));
+  }
+
+  render() {
+    return  <div ref={this.contentRef} />
+  }
 }
