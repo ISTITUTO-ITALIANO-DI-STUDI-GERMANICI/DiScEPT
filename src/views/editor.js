@@ -40,9 +40,8 @@ const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.t
  </text>
 </TEI>`;
 
-
 export default function EditorView() {
-  const [selectedLanguage, setSelectedLanguage] = React.useState(null);
+  const [selectedLanguage, setSelectedLanguage] = React.useState(data.getDocumentLanguages()[0]);
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
   const [addLanguageDialogShown, setAddLanguageDialogShown] = React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");

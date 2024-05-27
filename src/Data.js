@@ -1,7 +1,23 @@
 class Data {
   #changed = false;
   #project = {};
-  #documents = {};
+  #documents = {"it": `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+ <teiHeader>
+  <fileDesc>
+   <titleStmt>
+    <title>TEST</title>
+   </titleStmt>
+   <publicationStmt>
+    <p>A</p>
+   </publicationStmt>
+  </fileDesc>
+ </teiHeader>
+ <text>
+  <body><p>Something</p>
+  </body>
+ </text>
+</TEI>`
+};
 
   static ERR_INVALID_TYPE = "invalid";
   static ERR_NO_DISCEPT = "no-discept";
