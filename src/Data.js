@@ -1,7 +1,8 @@
 class Data {
   #changed = false;
   #project = {};
-  #documents = {"it": `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+  #documents = {
+    it: `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
  <teiHeader>
   <fileDesc>
    <titleStmt>
@@ -16,8 +17,10 @@ class Data {
   <body><p>Something</p>
   </body>
  </text>
-</TEI>`
-};
+</TEI>`,
+  };
+
+  #alignments = [];
 
   static ERR_INVALID_TYPE = "invalid";
   static ERR_NO_DISCEPT = "no-discept";
@@ -62,12 +65,66 @@ class Data {
     this.#changed = true;
   }
 
+  #getAlignments(langA, langB) {
+    let a = this.#alignments.find(
+      (a) => a.langA === langA && a.langB === langB,
+    );
+    if (a) {
+      return { aligments: a.aligments, swap: false };
+    }
+
+    a = this.#alignments.find((a) => a.langA === langB && a.langB === langA);
+    if (a) {
+      return { aligments: a.aligments, swap: true };
+    }
+
+    return null;
+  }
+
+  getAlignments(langA, langB) {
+    const a = this.#getAlignments(langA, langB);
+    if (!a) return [];
+
+    if (!a.swap) return a.aligments;
+
+    return a.aligments.map((obj) => ({ a: obj.b, b: obj.a }));
+  }
+
+  deleteAlignment(langA, langB, index) {
+    const a = this.#getAlignments(langA, langB);
+    if (!a) {
+      return;
+    }
+
+    a.aligments.splice(index, 1);
+    this.#changed = true;
+  }
+
+  addAlignment(langA, langB, idsA, idsB) {
+    const a = this.#getAlignments(langA, langB);
+    if (!a) {
+      this.#alignments.push({
+        langA,
+        langB,
+        aligments: [{ a: idsA, b: idsB }],
+      });
+      return;
+    }
+
+    if (!a.swap) {
+      a.aligments.push({ a: idsA, b: idsB });
+      return;
+    }
+
+    a.aligments.push({ a: idsB, b: idsA });
+  }
+
   async readFromFile(file) {
     // TODO: extract the project details
     // TODO: extract the languages
     // TODO: return an error in case the format is incompatible.
 
-   throw new Error(Data.ERR_NO_DISCEPT);
+    throw new Error(Data.ERR_NO_DISCEPT);
 
     this.#changed = false;
   }
@@ -75,7 +132,7 @@ class Data {
   generateTEI() {
     return "TODO";
   }
-};
+}
 
 const i = new Data();
 export default i;
