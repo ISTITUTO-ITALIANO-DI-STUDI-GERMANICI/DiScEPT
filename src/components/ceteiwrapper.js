@@ -1,5 +1,5 @@
 import * as React from "react";
-import CETEIHelper from '../CETEIHelper.js';
+import CETEIHelper from "../CETEIHelper.js";
 
 export default class CETEIWrapper extends React.Component {
   constructor(props) {
@@ -13,6 +13,6 @@ export default class CETEIWrapper extends React.Component {
   }
 
   render() {
-    return  <div ref={this.contentRef} />
+    return <div ref={this.contentRef} />;
   }
 }

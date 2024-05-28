@@ -1,28 +1,30 @@
-import React from 'react';
+import React from "react";
 
 import Grid from "@mui/material/Grid";
-import Divider from '@mui/material/Divider';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import IconButton from '@mui/material/IconButton';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
+import Divider from "@mui/material/Divider";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import IconButton from "@mui/material/IconButton";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 
-import EditorTab from '../components/editortab.js';
-import data from '../Data.js';
+import EditorTab from "../components/editortab.js";
+import data from "../Data.js";
 
-const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+const documentTemplate = (
+  language,
+) => `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
  <teiHeader>
   <fileDesc>
    <titleStmt>
@@ -41,9 +43,12 @@ const documentTemplate = (language) => `<TEI version="3.3.0" xmlns="http://www.t
 </TEI>`;
 
 export default function EditorView() {
-  const [selectedLanguage, setSelectedLanguage] = React.useState(data.getDocumentLanguages()[0]);
+  const [selectedLanguage, setSelectedLanguage] = React.useState(
+    data.getDocumentLanguages()[0],
+  );
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
-  const [addLanguageDialogShown, setAddLanguageDialogShown] = React.useState(false);
+  const [addLanguageDialogShown, setAddLanguageDialogShown] =
+    React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
 
   function deleteLanguage(language) {
@@ -59,7 +64,7 @@ export default function EditorView() {
     closeDeleteDialog();
 
     if (deletingLanguage === selectedLanguage) {
-      const languages = data.getDocumentLanguages()
+      const languages = data.getDocumentLanguages();
       setSelectedLanguage(languages.length ? languages[0] : "");
     }
   }
@@ -76,7 +81,10 @@ export default function EditorView() {
     closeAddLanguageDialog();
 
     if (!data.getDocumentPerLanguage(addingLanguage)) {
-      data.addDocumentPerLanguage(addingLanguage,  documentTemplate(addingLanguage));
+      data.addDocumentPerLanguage(
+        addingLanguage,
+        documentTemplate(addingLanguage),
+      );
       setSelectedLanguage(addingLanguage);
     }
   }
@@ -84,25 +92,37 @@ export default function EditorView() {
   return (
     <Grid container spacing={3}>
       <Grid item xs={9}>
-        <Typography variant="h3" gutterBottom>Edit the content</Typography>
-        {
-          data.getDocumentLanguages().map(language => (
-            <EditorTab key={"editortab-" + language}
-              visible={selectedLanguage === language}
-              language={language} />
-          ))
-        }
+        <Typography variant="h3" gutterBottom>
+          Edit the content
+        </Typography>
+        {data.getDocumentLanguages().map((language) => (
+          <EditorTab
+            key={"editortab-" + language}
+            visible={selectedLanguage === language}
+            language={language}
+          />
+        ))}
       </Grid>
       <Grid item xs={3}>
-        <List>{
-          data.getDocumentLanguages().map(language => (
-            <ListItem disablePadding key={"list-language-" + language} secondaryAction={
-              <IconButton edge="end" aria-label="delete" onClick={() => deleteLanguage(language)}>
-                <DeleteIcon />
-              </IconButton>
-            }>
-              <ListItemButton onClick={() => setSelectedLanguage(language)}
-                selected={selectedLanguage === language}>
+        <List>
+          {data.getDocumentLanguages().map((language) => (
+            <ListItem
+              disablePadding
+              key={"list-language-" + language}
+              secondaryAction={
+                <IconButton
+                  edge="end"
+                  aria-label="delete"
+                  onClick={() => deleteLanguage(language)}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              }
+            >
+              <ListItemButton
+                onClick={() => setSelectedLanguage(language)}
+                selected={selectedLanguage === language}
+              >
                 <ListItemText primary={language} />
               </ListItemButton>
             </ListItem>
@@ -130,12 +150,15 @@ export default function EditorView() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-language-desc">
-            Are you sure to delete this language? The operation cannot be undone.
+            Are you sure to delete this language? The operation cannot be
+            undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={closeDeleteDialog}>Cancel</Button>
-          <Button onClick={deleteLanguageConfirmed} autoFocus>Delete</Button>
+          <Button onClick={deleteLanguageConfirmed} autoFocus>
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -145,9 +168,7 @@ export default function EditorView() {
         aria-labelledby="add-language"
         aria-describedby="add-language-desc"
       >
-        <DialogTitle id="add-language">
-          {"Add a new language"}
-        </DialogTitle>
+        <DialogTitle id="add-language">{"Add a new language"}</DialogTitle>
         <DialogContent>
           <DialogContentText id="add-language-desc">
             Write the language identifier for the new document.
@@ -162,12 +183,14 @@ export default function EditorView() {
             type="text"
             fullWidth
             variant="standard"
-            onChange={e => setAddingLanguage(e.target.value)}
+            onChange={(e) => setAddingLanguage(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={closeAddLanguageDialog}>Cancel</Button>
-          <Button onClick={addLanguage} autoFocus>Add</Button>
+          <Button onClick={addLanguage} autoFocus>
+            Add
+          </Button>
         </DialogActions>
       </Dialog>
     </Grid>

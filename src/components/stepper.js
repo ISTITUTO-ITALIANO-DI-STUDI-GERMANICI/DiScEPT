@@ -21,10 +21,7 @@ export default function DisceptStepper({ steps, onChange }) {
         {steps.map((step, index) => (
           <Step key={step.label}>
             <StepLabel>
-              <Button
-                variant="text"
-                onClick={() => activate(index)}
-              >
+              <Button variant="text" onClick={() => activate(index)}>
                 {step.label}
               </Button>
             </StepLabel>

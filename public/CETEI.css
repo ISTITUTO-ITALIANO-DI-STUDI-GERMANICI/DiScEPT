@@ -5,3 +5,7 @@
 .selectedTEI {
   background-color: blue;
 }
+
+.previewAligmentTEI {
+  background-color: yellow !important;
+}
