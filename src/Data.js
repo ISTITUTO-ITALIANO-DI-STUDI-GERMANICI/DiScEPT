@@ -111,6 +111,8 @@ class Data {
       return;
     }
 
+    this.#changed = false;
+
     if (!a.swap) {
       a.aligments.push({ a: idsA, b: idsB });
       return;
@@ -130,7 +132,24 @@ class Data {
   }
 
   generateTEI() {
-    return "TODO";
+    // TODO: authors, resp...
+    // TODO: aligments
+
+    return `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+ <teiHeader>
+  <fileDesc>
+   <titleStmt>
+    <title>${this.#project.title || ""}</title>
+   </titleStmt>
+   <publicationStmt>
+    <p>${this.#project.pubStatement || ""}</p>
+   </publicationStmt>
+  </fileDesc>
+ </teiHeader>
+ ${Object.entries(this.#documents)
+   .map((entry) => entry[1])
+   .join("")}
+</TEI>`;
   }
 }
 
