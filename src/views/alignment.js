@@ -15,7 +15,7 @@ import AlignTab from "../components/aligntab.js";
 
 import data from "../Data.js";
 
-export default class EditorView extends React.Component {
+export default class ImageView extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
