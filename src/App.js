@@ -11,6 +11,7 @@ import IntroView from "./views/intro.js";
 import ProjectView from "./views/project.js";
 import EditorView from "./views/editor.js";
 import AlignmentView from "./views/alignment.js";
+import ImageView from "./views/image.js";
 import FinalView from "./views/final.js";
 
 const steps = [
@@ -34,6 +35,11 @@ const steps = [
     label: "Alignments",
     description: "Align your TEI documents.",
     component: AlignmentView,
+  },
+  {
+    label: "Images",
+    description: "Add image resources to your TEI documents.",
+    component: ImageView,
   },
   {
     label: "Final steps",

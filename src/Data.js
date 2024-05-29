@@ -1,25 +1,7 @@
 class Data {
   #changed = false;
   #project = {};
-  #documents = {
-    it: `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
- <teiHeader>
-  <fileDesc>
-   <titleStmt>
-    <title>TEST</title>
-   </titleStmt>
-   <publicationStmt>
-    <p>A</p>
-   </publicationStmt>
-  </fileDesc>
- </teiHeader>
- <text>
-  <body><p>Something</p>
-  </body>
- </text>
-</TEI>`,
-  };
-
+  #documents = {};
   #alignments = [];
 
   static ERR_INVALID_TYPE = "invalid";
@@ -43,11 +25,19 @@ class Data {
   }
 
   getDocumentPerLanguage(language) {
-    return this.#documents[language] || "";
+    if (!this.#documents[language]) {
+      return "";
+    }
+
+    return this.#documents[language].document || "";
   }
 
   addDocumentPerLanguage(language, body) {
-    this.#documents[language] = body;
+    if (!this.#documents[language]) {
+      this.#documents[language] = {};
+    }
+
+    this.#documents[language].document = body;
     this.#changed = true;
   }
 
@@ -61,7 +51,7 @@ class Data {
   }
 
   updateDocumentPerLanguage(language, value) {
-    this.#documents[language] = value;
+    this.#documents[language].document = value;
     this.#changed = true;
   }
 
@@ -121,6 +111,29 @@ class Data {
     a.aligments.push({ a: idsB, b: idsA });
   }
 
+  getImages(language) {
+    if (!this.#documents[language]) {
+      return [];
+    }
+
+    return this.#documents[language].images || [];
+  }
+
+  addImage(language, ids, url, type) {
+    if (!this.#documents[language].images) {
+      this.#documents[language].images = [];
+    }
+
+    this.#documents[language].images.push({ ids, url, type });
+    // TODO
+  }
+
+  deleteImage(language, index) {
+    if (this.#documents[language] && this.#documents[language].images) {
+      this.#documents[language].images.splice(index, 1);
+    }
+  }
+
   async readFromFile(file) {
     // TODO: extract the project details
     // TODO: extract the languages
@@ -147,7 +160,7 @@ class Data {
   </fileDesc>
  </teiHeader>
  ${Object.entries(this.#documents)
-   .map((entry) => entry[1])
+   .map((entry) => entry[1].document)
    .join("")}
 </TEI>`;
   }
