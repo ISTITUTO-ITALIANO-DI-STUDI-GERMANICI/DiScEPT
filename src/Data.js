@@ -119,12 +119,12 @@ class Data {
     return this.#documents[language].images || [];
   }
 
-  addImage(language, ids, url, type) {
+  addImage(language, id, ids, url, type) {
     if (!this.#documents[language].images) {
       this.#documents[language].images = [];
     }
 
-    this.#documents[language].images.push({ ids, url, type });
+    this.#documents[language].images.push({ id, ids, url, type });
     // TODO
   }
 
@@ -147,6 +147,7 @@ class Data {
   generateTEI() {
     // TODO: authors, resp...
     // TODO: aligments
+    // TODO: groups for images
 
     return `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
  <teiHeader>
@@ -159,10 +160,35 @@ class Data {
    </publicationStmt>
   </fileDesc>
  </teiHeader>
+
+ ${this.#generateTEIFacsimiles()}
+
  ${Object.entries(this.#documents)
    .map((entry) => entry[1].document)
    .join("")}
 </TEI>`;
+  }
+
+  #generateTEIFacsimiles() {
+    return `
+  <facsimile>
+   ${Object.entries(this.#documents)
+     .map((entry) => entry[1].images || [])
+     .flat()
+     .map((image) => {
+       if (!image.url || !image.type) return "";
+
+       // TODO: escape params
+       if (image.type === "URL")
+         return `<graphic id="${image.id}" url="${image.url}"/>`;
+
+       // TODO: what about IIIF?!?
+       // TODO: escape params
+       if (image.type === "IIIF")
+         return `<graphic id="${image.id}" url=${image.url}"/>`;
+     })}
+  </facsimile>
+`;
   }
 }
 
