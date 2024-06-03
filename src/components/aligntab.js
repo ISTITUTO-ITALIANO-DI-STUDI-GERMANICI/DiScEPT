@@ -53,7 +53,10 @@ export default function AlignTab({
 
   return (
     <Box>
-      <FormControl fullWidth>
+      <FormControl
+        fullWidth
+        disabled={data.getDocumentLanguages().length === 0}
+      >
         <InputLabel id={id + "-label"}>Language</InputLabel>
         <Select
           labelId={id + "-label"}
