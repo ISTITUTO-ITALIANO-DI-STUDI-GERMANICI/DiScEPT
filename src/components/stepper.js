@@ -19,7 +19,7 @@ export default function DisceptStepper({ steps, onChange }) {
     <Box sx={{ maxWidth: 400 }}>
       <Stepper activeStep={activeStep} orientation="vertical">
         {steps.map((step, index) => (
-          <Step key={step.label}>
+          <Step key={step.label} id={"step-" + index}>
             <StepLabel>
               <Button variant="text" onClick={() => activate(index)}>
                 {step.label}

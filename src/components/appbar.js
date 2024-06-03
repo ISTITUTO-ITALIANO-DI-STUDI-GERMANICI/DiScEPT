@@ -6,6 +6,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import IconButton from "@mui/material/IconButton";
+import HelpIcon from '@mui/icons-material/Help';
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -19,7 +20,7 @@ const VisuallyHiddenInput = styled("input")({
   width: 1,
 });
 
-export default function ButtonAppBar({ fileUploaded }) {
+export default function DisceptAppBar({ fileUploaded, onHelp }) {
   const fileUpload = (e) => {
     if (e.target.files.length !== 1) {
       return;
@@ -38,7 +39,7 @@ export default function ButtonAppBar({ fileUploaded }) {
         <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: { xs: "none", md: "flex" } }}>
-          <IconButton
+          <IconButton id="discept-file-uploader"
             component="label"
             size="large"
             aria-label="upload file"
@@ -46,6 +47,15 @@ export default function ButtonAppBar({ fileUploaded }) {
           >
             <CloudUploadIcon />
             <VisuallyHiddenInput type="file" onChange={fileUpload} />
+          </IconButton>
+
+          <IconButton
+            component="label"
+            size="large"
+            aria-label="help"
+            color="inherit"
+            onClick={onHelp}>
+            <HelpIcon />
           </IconButton>
         </Box>
       </Toolbar>

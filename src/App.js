@@ -2,10 +2,13 @@ import * as React from "react";
 
 import Grid from "@mui/material/Grid";
 import CssBaseline from "@mui/material/CssBaseline";
+import { withCookies, Cookies } from 'react-cookie';
+import { instanceOf } from 'prop-types';
 
 import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
 import DisceptFileUploader from "./components/fileuploader.js";
+import Onboarding from './components/onboarding.js';
 
 import IntroView from "./views/intro.js";
 import ProjectView from "./views/project.js";
@@ -48,11 +51,21 @@ const steps = [
   },
 ];
 
-export default class App extends React.Component {
-  state = {
-    currentStep: 0,
-    fileUploaded: null,
+class App extends React.Component {
+  static propTypes = {
+    cookies: instanceOf(Cookies).isRequired,
   };
+
+  constructor(props) {
+    super(props);
+
+    const { cookies } = props;
+    this.state = {
+      currentStep: 0,
+      fileUploaded: null,
+      runOnboarding: !cookies.get('skipOnboarding') || false,
+    };
+  }
 
   render() {
     const Item = ({ step }) => {
@@ -68,11 +81,22 @@ export default class App extends React.Component {
       this.setState({ fileUploaded });
     };
 
+    const runOnboarding = () => {
+      this.setState({ runOnboarding: true})
+    }
+
+    const onboardingCompleted = () => {
+      this.setState({ runOnboarding: false})
+
+      const { cookies } = this.props;
+      cookies.set('skipOnboarding', true, {path: '/'});
+    }
+
     return (
       <React.Fragment>
         <CssBaseline />
 
-        <DisceptAppBar fileUploaded={fileUploaded} />
+        <DisceptAppBar fileUploaded={fileUploaded} onHelp={runOnboarding} />
 
         <Grid container spacing={2} sx={{ p: 3 }}>
           <Grid item xs={2}>
@@ -87,7 +111,11 @@ export default class App extends React.Component {
           fileUploaded={this.state.fileUploaded}
           onChange={() => changeStep(0)}
         />
+
+        <Onboarding run={this.state.runOnboarding} onCompleted={onboardingCompleted} />
       </React.Fragment>
     );
   }
 }
+
+export default withCookies(App);
