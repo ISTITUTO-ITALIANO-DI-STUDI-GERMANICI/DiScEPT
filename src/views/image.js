@@ -21,7 +21,7 @@ import OpenSeaDragon from "../components/openseadragon.js";
 
 import data from "../Data.js";
 
-export default class ImageView extends React.Component {
+class ImageView extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -160,6 +160,7 @@ export default class ImageView extends React.Component {
               required={true}
               multiline={false}
               type="url"
+              id="imageURL"
               onChange={handleURLChange}
               value={this.state.imageURL}
               sx={{ mt: 2, mb: 2 }}
@@ -172,6 +173,7 @@ export default class ImageView extends React.Component {
             />
 
             <Button
+              id="create-image"
               variant="contained"
               disabled={!this.state.selections.length || !this.state.imageURL}
               onClick={createLink}
@@ -213,3 +215,30 @@ export default class ImageView extends React.Component {
     );
   }
 }
+
+const ImageOnboarding = [
+  {
+    popover: {
+      title: "Image section",
+      description: "TODO",
+    },
+  },
+  {
+    element: "#tab-select",
+    popover: { title: "Pick a language", description: "TODO" },
+  },
+  {
+    element: "#type-select",
+    popover: { title: "Select an image type", description: "TODO" },
+  },
+  {
+    element: "#imageURL",
+    popover: { title: "Add an imageURL", description: "TODO" },
+  },
+  {
+    element: "#create-image",
+    popover: { title: "Save the image", description: "TODO" },
+  },
+];
+
+export { ImageView, ImageOnboarding };
