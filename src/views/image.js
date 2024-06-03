@@ -29,6 +29,7 @@ export default class ImageView extends React.Component {
       selections: [],
       listRefreshNeeded: 0,
       imageURL: "",
+      imageURLInvalid: false,
       imageType: "",
     };
   }
@@ -57,6 +58,7 @@ export default class ImageView extends React.Component {
 
       data.addImage(
         this.state.language,
+        crypto.randomUUID(),
         ids,
         this.state.imageURL,
         this.state.imageType,
@@ -114,7 +116,10 @@ export default class ImageView extends React.Component {
     };
 
     const handleURLChange = (e) => {
-      this.setState({ imageURL: e.target.value });
+      this.setState({
+        imageURLInvalid: !e.target.checkValidity(),
+        imageURL: e.target.value,
+      });
     };
 
     const handleImageTypeChange = (e) => {
@@ -154,14 +159,16 @@ export default class ImageView extends React.Component {
               label="URL"
               required={true}
               multiline={false}
+              type="url"
               onChange={handleURLChange}
               value={this.state.imageURL}
               sx={{ mt: 2, mb: 2 }}
+              error={this.state.imageURLInvalid}
             />
 
             <OpenSeaDragon
               type={this.state.imageType}
-              url={this.state.imageURL}
+              url={this.state.imageURLInvalid ? null : this.state.imageURL}
             />
 
             <Button
