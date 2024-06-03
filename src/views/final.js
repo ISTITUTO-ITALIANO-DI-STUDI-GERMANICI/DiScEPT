@@ -6,7 +6,7 @@ import Typography from "@mui/material/Typography";
 
 import data from "../Data.js";
 
-export default function FinalView() {
+function FinalView() {
   function downloadTEI() {
     let blob = new Blob([data.generateTEI()], { type: "octet/stream" });
 
@@ -86,3 +86,14 @@ export default function FinalView() {
     </Box>
   );
 }
+
+const FinalOnboarding = [
+  {
+    popover: {
+      title: "Final section",
+      description: "TODO",
+    },
+  },
+];
+
+export { FinalView, FinalOnboarding };

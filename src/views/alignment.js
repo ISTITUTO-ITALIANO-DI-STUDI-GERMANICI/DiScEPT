@@ -15,7 +15,7 @@ import AlignTab from "../components/aligntab.js";
 
 import data from "../Data.js";
 
-export default class ImageView extends React.Component {
+class AlignmentView extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -175,6 +175,7 @@ export default class ImageView extends React.Component {
           </Grid>
           <Grid item xs={3}>
             <Button
+              id="alignment-link"
               variant="contained"
               disabled={
                 !this.state.tabASelections.length ||
@@ -217,3 +218,26 @@ export default class ImageView extends React.Component {
     );
   }
 }
+
+const AlignmentOnboarding = [
+  {
+    popover: {
+      title: "Alignment section",
+      description: "TODO",
+    },
+  },
+  {
+    element: "#tabA-select",
+    popover: { title: "Pick a language", description: "TODO" },
+  },
+  {
+    element: "#tabB-select",
+    popover: { title: "Pick a language", description: "TODO" },
+  },
+  {
+    element: "#alignment-link",
+    popover: { title: "Create a link", description: "TODO" },
+  },
+];
+
+export { AlignmentView, AlignmentOnboarding };

@@ -6,7 +6,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import IconButton from "@mui/material/IconButton";
-import HelpIcon from '@mui/icons-material/Help';
+import HelpIcon from "@mui/icons-material/Help";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -39,7 +39,8 @@ export default function DisceptAppBar({ fileUploaded, onHelp }) {
         <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: { xs: "none", md: "flex" } }}>
-          <IconButton id="discept-file-uploader"
+          <IconButton
+            id="discept-file-uploader"
             component="label"
             size="large"
             aria-label="upload file"
@@ -50,11 +51,13 @@ export default function DisceptAppBar({ fileUploaded, onHelp }) {
           </IconButton>
 
           <IconButton
+            id="help"
             component="label"
             size="large"
             aria-label="help"
             color="inherit"
-            onClick={onHelp}>
+            onClick={onHelp}
+          >
             <HelpIcon />
           </IconButton>
         </Box>

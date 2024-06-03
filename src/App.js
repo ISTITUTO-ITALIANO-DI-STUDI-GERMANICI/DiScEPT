@@ -2,52 +2,58 @@ import * as React from "react";
 
 import Grid from "@mui/material/Grid";
 import CssBaseline from "@mui/material/CssBaseline";
-import { withCookies, Cookies } from 'react-cookie';
-import { instanceOf } from 'prop-types';
+import { withCookies, Cookies } from "react-cookie";
+import { instanceOf } from "prop-types";
 
 import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
 import DisceptFileUploader from "./components/fileuploader.js";
-import Onboarding from './components/onboarding.js';
+import Onboarding from "./components/onboarding.js";
 
-import IntroView from "./views/intro.js";
-import ProjectView from "./views/project.js";
-import EditorView from "./views/editor.js";
-import AlignmentView from "./views/alignment.js";
-import ImageView from "./views/image.js";
-import FinalView from "./views/final.js";
+import { IntroView, IntroOnboarding } from "./views/intro.js";
+import { ProjectView, ProjectOnboarding } from "./views/project.js";
+import { EditorView, EditorOnboarding } from "./views/editor.js";
+import { AlignmentView, AlignmentOnboarding } from "./views/alignment.js";
+import { ImageView, ImageOnboarding } from "./views/image.js";
+import { FinalView, FinalOnboarding } from "./views/final.js";
 
 const steps = [
   {
     label: "Intro",
     description: "Read about this project!",
     component: IntroView,
+    onboarding: IntroOnboarding,
   },
   {
     label: "Project description",
     description: "Describe your project, the team members, the authors, etc.",
     component: ProjectView,
+    onboarding: ProjectOnboarding,
   },
   {
     label: "TEI and translations",
     description:
       "Create or upload your TEI documents and define the translation sources.",
     component: EditorView,
+    onboarding: EditorOnboarding,
   },
   {
     label: "Alignments",
     description: "Align your TEI documents.",
     component: AlignmentView,
+    onboarding: AlignmentOnboarding,
   },
   {
     label: "Images",
     description: "Add image resources to your TEI documents.",
     component: ImageView,
+    onboarding: ImageOnboarding,
   },
   {
     label: "Final steps",
     description: "Create your digital edition.",
     component: FinalView,
+    onboarding: FinalOnboarding,
   },
 ];
 
@@ -60,10 +66,14 @@ class App extends React.Component {
     super(props);
 
     const { cookies } = props;
+
     this.state = {
       currentStep: 0,
       fileUploaded: null,
-      runOnboarding: !cookies.get('skipOnboarding') || false,
+      skipOnboarding: ("" + cookies.get("skipOnboarding") || "")
+        .split(",")
+        .map((value) => parseInt(value))
+        .filter((value) => typeof value === "number" && isFinite(value)),
     };
   }
 
@@ -82,15 +92,28 @@ class App extends React.Component {
     };
 
     const runOnboarding = () => {
-      this.setState({ runOnboarding: true})
-    }
+      this.setState({
+        skipOnboarding: this.state.skipOnboarding.filter(
+          (value) => value != this.state.currentStep,
+        ),
+      });
+    };
 
     const onboardingCompleted = () => {
-      this.setState({ runOnboarding: false})
+      const skipOnboarding = this.state.skipOnboarding.filter(
+        (value) => value != this.state.currentStep,
+      );
+      skipOnboarding.push(this.state.currentStep);
+
+      this.setState({ skipOnboarding });
 
       const { cookies } = this.props;
-      cookies.set('skipOnboarding', true, {path: '/'});
-    }
+      cookies.set("skipOnboarding", skipOnboarding.join(","), {
+        path: "/",
+        sameSite: "lax",
+        maxAge: 3600 * 24 * 1024,
+      });
+    };
 
     return (
       <React.Fragment>
@@ -112,7 +135,11 @@ class App extends React.Component {
           onChange={() => changeStep(0)}
         />
 
-        <Onboarding run={this.state.runOnboarding} onCompleted={onboardingCompleted} />
+        <Onboarding
+          run={!this.state.skipOnboarding.includes(this.state.currentStep)}
+          onCompleted={onboardingCompleted}
+          steps={steps[this.state.currentStep].onboarding}
+        />
       </React.Fragment>
     );
   }

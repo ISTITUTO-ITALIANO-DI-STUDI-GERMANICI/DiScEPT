@@ -42,7 +42,7 @@ const documentTemplate = (
  </text>
 </TEI>`;
 
-export default function EditorView() {
+function EditorView() {
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     data.getDocumentLanguages()[0],
   );
@@ -105,10 +105,11 @@ export default function EditorView() {
       </Grid>
       <Grid item xs={3}>
         <List>
-          {data.getDocumentLanguages().map((language) => (
+          {data.getDocumentLanguages().map((language, index) => (
             <ListItem
               disablePadding
-              key={"list-language-" + language}
+              key={"list-language-" + index}
+              id={"list-language-" + index}
               secondaryAction={
                 <IconButton
                   edge="end"
@@ -129,7 +130,10 @@ export default function EditorView() {
           ))}
           <Divider />
           <ListItem disablePadding>
-            <ListItemButton onClick={showAddLanguageDialog}>
+            <ListItemButton
+              id="editor-add-language"
+              onClick={showAddLanguageDialog}
+            >
               <ListItemIcon>
                 <AddIcon />
               </ListItemIcon>
@@ -196,3 +200,19 @@ export default function EditorView() {
     </Grid>
   );
 }
+
+const EditorOnboarding = [
+  {
+    popover: {
+      title: "Editor section",
+      description: "TODO",
+    },
+  },
+  {
+    element: "#editor-add-language",
+    popover: { title: "Click here to add a language", description: "TODO" },
+  },
+  // TODO: dynamci add a language if needed
+];
+
+export { EditorView, EditorOnboarding };

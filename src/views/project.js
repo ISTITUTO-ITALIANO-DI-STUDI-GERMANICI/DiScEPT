@@ -29,7 +29,7 @@ const fields = [
   },
 ];
 
-export default function ProjectView() {
+function ProjectView() {
   const [validForm, setValidForm] = React.useState(false);
   const [values, setValues] = React.useState(data.project);
 
@@ -52,18 +52,21 @@ export default function ProjectView() {
         Project base properties
       </Typography>
 
-      {fields.map((field, index) => (
-        <Box key={index} component="span" display="block" gap={4} p={2}>
-          <TextField
-            label={field.name}
-            required={field.required || false}
-            multiline={field.multiline || false}
-            onChange={(e) => handleChange(e, field.id)}
-            sx={{ width: 500 }}
-            defaultValue={values[field.id] || ""}
-          />
-        </Box>
-      ))}
+      <Box id="project-fields">
+        {fields.map((field, index) => (
+          <Box key={index} component="span" display="block" gap={4} p={2}>
+            <TextField
+              label={field.name}
+              required={field.required || false}
+              multiline={field.multiline || false}
+              onChange={(e) => handleChange(e, field.id)}
+              sx={{ width: 500 }}
+              defaultValue={values[field.id] || ""}
+            />
+          </Box>
+        ))}
+      </Box>
+
       <Box sx={{ mb: 2 }}>
         <div>
           <Button
@@ -79,3 +82,18 @@ export default function ProjectView() {
     </Box>
   );
 }
+
+const ProjectOnboarding = [
+  {
+    popover: {
+      title: "Project section",
+      description: "TODO",
+    },
+  },
+  {
+    element: "#project-fields",
+    popover: { title: "Customize your project", description: "TODO" },
+  },
+];
+
+export { ProjectView, ProjectOnboarding };

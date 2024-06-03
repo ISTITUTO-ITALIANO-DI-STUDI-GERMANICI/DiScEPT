@@ -4,7 +4,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
 
-export default function IntroView() {
+function IntroView() {
   return (
     <Box>
       <Typography variant="h3" gutterBottom>
@@ -120,3 +120,52 @@ export default function IntroView() {
     </Box>
   );
 }
+
+const IntroOnboarding = [
+  {
+    popover: {
+      title: "DiSCePT",
+      description:
+        "DiSCePT is a nice tool. But we need to write the documentation! TODO",
+    },
+  },
+  {
+    element: "#discept-file-uploader",
+    popover: {
+      title: "Upload your TEI files",
+      description: "DiSCePT supports TEI as input and as output. TODO",
+    },
+  },
+  {
+    element: "#step-1",
+    popover: {
+      title: "Project description",
+      description: "Here you can write your project details",
+    },
+  },
+  {
+    element: "#step-2",
+    popover: { title: "Define your translation sources", description: "TODO" },
+  },
+  {
+    element: "#step-3",
+    popover: { title: "Align your translation sources", description: "TODO" },
+  },
+  {
+    element: "#step-4",
+    popover: {
+      title: "Image support",
+      description: "Do you want to add images? TODO",
+    },
+  },
+  {
+    element: "#step-5",
+    popover: { title: "Download your final TEI", description: "TODO" },
+  },
+  {
+    element: "#help",
+    popover: { title: "Click here for help!", description: "TODO" },
+  },
+];
+
+export { IntroView, IntroOnboarding };
