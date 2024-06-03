@@ -17,6 +17,7 @@ import Select from "@mui/material/Select";
 import InputLabel from "@mui/material/InputLabel";
 
 import AlignTab from "../components/aligntab.js";
+import OpenSeaDragon from "../components/openseadragon.js";
 
 import data from "../Data.js";
 
@@ -155,7 +156,12 @@ export default class ImageView extends React.Component {
               multiline={false}
               onChange={handleURLChange}
               value={this.state.imageURL}
-              sx={{ mt: 2 }}
+              sx={{ mt: 2, mb: 2 }}
+            />
+
+            <OpenSeaDragon
+              type={this.state.imageType}
+              url={this.state.imageURL}
             />
 
             <Button
