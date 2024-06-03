@@ -12,6 +12,7 @@ export default function AlignTab({
   id,
   onLanguageChanged,
   onSelectionChanged,
+  excludeLanguage,
 }) {
   const [language, setLanguage] = React.useState("");
   const contentRef = React.createRef();
@@ -55,7 +56,11 @@ export default function AlignTab({
     <Box>
       <FormControl
         fullWidth
-        disabled={data.getDocumentLanguages().length === 0}
+        disabled={
+          data
+            .getDocumentLanguages()
+            .filter((language) => language !== excludeLanguage).length === 0
+        }
       >
         <InputLabel id={id + "-label"}>Language</InputLabel>
         <Select
@@ -65,11 +70,14 @@ export default function AlignTab({
           label="Language"
           onChange={handleChange}
         >
-          {data.getDocumentLanguages().map((language) => (
-            <MenuItem value={language} key={id + "-key-" + language}>
-              {language}
-            </MenuItem>
-          ))}
+          {data
+            .getDocumentLanguages()
+            .filter((language) => language !== excludeLanguage)
+            .map((language) => (
+              <MenuItem value={language} key={id + "-key-" + language}>
+                {language}
+              </MenuItem>
+            ))}
         </Select>
       </FormControl>
 

@@ -158,6 +158,7 @@ export default class ImageView extends React.Component {
               onSelectionChanged={(domElm, teiElm, rootElm) =>
                 updateSelection("tabA", domElm, teiElm, rootElm)
               }
+              excludeLanguage={this.state.tabBLanguage}
             />
           </Grid>
           <Grid item xs={4.5}>
@@ -169,6 +170,7 @@ export default class ImageView extends React.Component {
               onSelectionChanged={(domElm, teiElm, rootElm) =>
                 updateSelection("tabB", domElm, teiElm, rootElm)
               }
+              excludeLanguage={this.state.tabALanguage}
             />
           </Grid>
           <Grid item xs={3}>
