@@ -2,8 +2,6 @@ import * as React from "react";
 
 import Grid from "@mui/material/Grid";
 import CssBaseline from "@mui/material/CssBaseline";
-import { withCookies, Cookies } from "react-cookie";
-import { instanceOf } from "prop-types";
 
 import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
@@ -58,22 +56,13 @@ const steps = [
 ];
 
 class App extends React.Component {
-  static propTypes = {
-    cookies: instanceOf(Cookies).isRequired,
-  };
-
   constructor(props) {
     super(props);
-
-    const { cookies } = props;
 
     this.state = {
       currentStep: 0,
       fileUploaded: null,
-      skipOnboarding: ("" + cookies.get("skipOnboarding") || "")
-        .split(",")
-        .map((value) => parseInt(value))
-        .filter((value) => typeof value === "number" && isFinite(value)),
+      runOnboarding: false,
     };
   }
 
@@ -92,27 +81,11 @@ class App extends React.Component {
     };
 
     const runOnboarding = () => {
-      this.setState({
-        skipOnboarding: this.state.skipOnboarding.filter(
-          (value) => value != this.state.currentStep,
-        ),
-      });
+      this.setState({ runOnboarding: true });
     };
 
     const onboardingCompleted = () => {
-      const skipOnboarding = this.state.skipOnboarding.filter(
-        (value) => value != this.state.currentStep,
-      );
-      skipOnboarding.push(this.state.currentStep);
-
-      this.setState({ skipOnboarding });
-
-      const { cookies } = this.props;
-      cookies.set("skipOnboarding", skipOnboarding.join(","), {
-        path: "/",
-        sameSite: "lax",
-        maxAge: 3600 * 24 * 1024,
-      });
+      this.setState({ runOnboarding: false });
     };
 
     return (
@@ -136,7 +109,7 @@ class App extends React.Component {
         />
 
         <Onboarding
-          run={!this.state.skipOnboarding.includes(this.state.currentStep)}
+          run={this.state.runOnboarding}
           onCompleted={onboardingCompleted}
           steps={steps[this.state.currentStep].onboarding}
         />
@@ -145,4 +118,4 @@ class App extends React.Component {
   }
 }
 
-export default withCookies(App);
+export default App;
