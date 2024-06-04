@@ -125,7 +125,6 @@ class Data {
     }
 
     this.#documents[language].images.push({ id, ids, url, type });
-    // TODO
   }
 
   deleteImage(language, index) {
@@ -135,11 +134,33 @@ class Data {
   }
 
   async readFromFile(file) {
-    // TODO: extract the project details
-    // TODO: extract the languages
-    // TODO: return an error in case the format is incompatible.
+    const parser = new DOMParser();
+    const dom = parser.parseFromString(await file.text(), "text/xml");
 
-    throw new Error(Data.ERR_NO_DISCEPT);
+    if (
+      !dom.firstChild ||
+      // What about TEICorpus? TODO
+      dom.firstChild.tagName !== "TEI" ||
+      dom.firstChild.namespaceURI !== "http://www.tei-c.org/ns/1.0"
+    ) {
+      throw new Error(Data.ERR_INVALID_TYPE);
+    }
+
+    // TEI/text is not our model.
+    if (Array.from(dom.firstChild.children).find((a) => a.tagName === "text")) {
+      throw new Error(Data.ERR_NO_DISCEPT);
+    }
+
+    this.#documents = {};
+
+    Array.from(dom.firstChild.children)
+      .filter((a) => a.tagName === "TEI")
+      .map((a) => ({ language: "TODO", document: a.outerHTML }))
+      .forEach((a) => (this.#documents[a.language] = { document: a.document }));
+
+    // TODO: extract the project details
+    // TODO: extract the images
+    // TODO: extract the alignents
 
     this.#changed = false;
   }
