@@ -1,3 +1,5 @@
+const TEI_NS = "http://www.tei-c.org/ns/1.0";
+
 class Data {
   #changed = false;
   #project = {};
@@ -141,7 +143,7 @@ class Data {
       !dom.firstChild ||
       // What about TEICorpus? TODO
       dom.firstChild.tagName !== "TEI" ||
-      dom.firstChild.namespaceURI !== "http://www.tei-c.org/ns/1.0"
+      dom.firstChild.namespaceURI !== TEI_NS
     ) {
       throw new Error(Data.ERR_INVALID_TYPE);
     }
@@ -166,50 +168,105 @@ class Data {
   }
 
   generateTEI() {
-    // TODO: authors, resp...
-    // TODO: aligments
-    // TODO: groups for images
-
-    return `<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+    const parser = new DOMParser();
+    const dom = parser.parseFromString(
+      `<TEI version="3.3.0" xmlns="${TEI_NS}">
  <teiHeader>
   <fileDesc>
    <titleStmt>
-    <title>${this.#project.title || ""}</title>
+    <title></title>
    </titleStmt>
-   <publicationStmt>
-    <p>${this.#project.pubStatement || ""}</p>
-   </publicationStmt>
+   <publicationStmt><p></p></publicationStmt>
   </fileDesc>
  </teiHeader>
+ <facsimile></facsimile>
+</TEI>`,
+      "text/xml",
+    );
 
- ${this.#generateTEIFacsimiles()}
+    if (this.#project.title) {
+      const result = dom.evaluate(
+        "/tei:TEI/tei:teiHeader//tei:title",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      result.iterateNext().textContent = this.#project.title;
+    }
 
- ${Object.entries(this.#documents)
-   .map((entry) => entry[1].document)
-   .join("")}
-</TEI>`;
-  }
+    if (this.#project.pubStatement) {
+      const result = dom.evaluate(
+        "/tei:TEI/tei:teiHeader//tei:publicationStmt/tei:p",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      result.iterateNext().textContent = this.#project.pubStatement;
+    }
 
-  #generateTEIFacsimiles() {
-    return `
-  <facsimile>
-   ${Object.entries(this.#documents)
-     .map((entry) => entry[1].images || [])
-     .flat()
-     .map((image) => {
-       if (!image.url || !image.type) return "";
+    {
+      const result = dom.evaluate(
+        "/tei:TEI/tei:facsimile",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      Object.entries(this.#documents)
+        .map((entry) => entry[1].images || [])
+        .flat()
+        .forEach((image) => {
+          if (!image.url || !image.type) return;
 
-       // TODO: escape params
-       if (image.type === "URL")
-         return `<graphic id="${image.id}" url="${image.url}"/>`;
+          if (image.type === "URL") {
+            const graphic = dom.createElementNS(TEI_NS, "graphic");
+            graphic.setAttribute("id", image.id);
+            graphic.setAttribute("url", image.url);
+            result.iterateNext().append(graphic);
+          }
 
-       // TODO: what about IIIF?!?
-       // TODO: escape params
-       if (image.type === "IIIF")
-         return `<graphic id="${image.id}" url=${image.url}"/>`;
-     })}
-  </facsimile>
-`;
+          // TODO: what about IIIF?!?
+        });
+    }
+
+    {
+      const result = dom.evaluate(
+        "/tei:TEI",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      const elm = result.iterateNext();
+
+      Object.entries(this.#documents)
+        .map((entry) => entry[1].document)
+        .forEach((doc) => {
+          const parser = new DOMParser();
+          const domDoc = parser.parseFromString(doc, "text/xml");
+
+          if (
+            !domDoc.firstChild ||
+            // What about TEICorpus? TODO
+            domDoc.firstChild.tagName !== "TEI" ||
+            domDoc.firstChild.namespaceURI !== TEI_NS
+          ) {
+            return;
+          }
+
+          elm.append(domDoc.firstChild);
+        });
+    }
+
+    // TODO: authors
+    // TODO: resp
+    // TODO: aligments
+    // TODO: groups for images
+
+    const s = new XMLSerializer();
+    return s.serializeToString(dom);
   }
 }
 
