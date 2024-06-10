@@ -2,6 +2,7 @@
   "name": "react.dev",
   "version": "0.0.0",
   "main": "/src/index.js",
+  "homepage": "https://istituto-italiano-di-studi-germanici.github.io/DiScEPT/",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
