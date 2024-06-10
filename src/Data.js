@@ -1,5 +1,113 @@
 const TEI_NS = "http://www.tei-c.org/ns/1.0";
 
+const helpers = [
+  // Template
+  { setter: (dom, data) => {}, getter: (dom, data) => {} },
+
+  // Title
+  {
+    setter: (dom, data) => {
+      if (data.project.title) {
+        const result = dom.evaluate(
+          "/tei:TEI/tei:teiHeader//tei:title",
+          dom,
+          (prefix) => (prefix === "tei" ? TEI_NS : null),
+          XPathResult.ANY_TYPE,
+          null,
+        );
+        result.iterateNext().textContent = data.project.title;
+      }
+    },
+    getter: (dom, data) => {},
+  },
+
+  // Publication statements
+  {
+    setter: (dom, data) => {
+      if (data.project.pubStatement) {
+        const result = dom.evaluate(
+          "/tei:TEI/tei:teiHeader//tei:publicationStmt/tei:p",
+          dom,
+          (prefix) => (prefix === "tei" ? TEI_NS : null),
+          XPathResult.ANY_TYPE,
+          null,
+        );
+        result.iterateNext().textContent = data.project.pubStatement;
+      }
+    },
+    getter: (dom, data) => {},
+  },
+
+  // Documents and languages
+  {
+    getter: (dom, data) =>
+      Array.from(dom.firstChild.children)
+        .filter((a) => a.tagName === "TEI")
+        .map((a) => ({ language: "TODO", document: a.outerHTML }))
+        .forEach((a) => data.addDocumentPerLanguage(a.language, a.document)),
+    setter: (dom, data) => {
+      const result = dom.evaluate(
+        "/tei:TEI",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      const elm = result.iterateNext();
+
+      data
+        .getDocumentLanguages()
+        .map((language) => data.getDocumentPerLanguage(language))
+        .forEach((doc) => {
+          const parser = new DOMParser();
+          const domDoc = parser.parseFromString(doc, "text/xml");
+
+          if (
+            !domDoc.firstChild ||
+            // What about TEICorpus? TODO
+            domDoc.firstChild.tagName !== "TEI" ||
+            domDoc.firstChild.namespaceURI !== TEI_NS
+          ) {
+            return;
+          }
+
+          elm.append(domDoc.firstChild);
+        });
+    },
+  },
+
+  // Images
+  {
+    getter: (dom, data) => {},
+    setter: (dom, data) => {
+      const result = dom.evaluate(
+        "/tei:TEI/tei:facsimile",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      data
+        .getDocumentLanguages()
+        .map((language) => data.getImages(language))
+        .map((images) => images || [])
+        .flat()
+        .forEach((image) => {
+          if (!image.url || !image.type) return;
+
+          if (image.type === "URL") {
+            const graphic = dom.createElementNS(TEI_NS, "graphic");
+            graphic.setAttribute("id", image.id);
+            graphic.setAttribute("url", image.url);
+            result.iterateNext().append(graphic);
+          }
+
+          // TODO: what about IIIF?!?
+        });
+    },
+  },
+];
+
 class Data {
   #changed = false;
   #project = {};
@@ -155,10 +263,9 @@ class Data {
 
     this.#documents = {};
 
-    Array.from(dom.firstChild.children)
-      .filter((a) => a.tagName === "TEI")
-      .map((a) => ({ language: "TODO", document: a.outerHTML }))
-      .forEach((a) => (this.#documents[a.language] = { document: a.document }));
+    for (const helper of helpers) {
+      helper.getter(dom, this);
+    }
 
     // TODO: extract the project details
     // TODO: extract the images
@@ -184,80 +291,8 @@ class Data {
       "text/xml",
     );
 
-    if (this.#project.title) {
-      const result = dom.evaluate(
-        "/tei:TEI/tei:teiHeader//tei:title",
-        dom,
-        (prefix) => (prefix === "tei" ? TEI_NS : null),
-        XPathResult.ANY_TYPE,
-        null,
-      );
-      result.iterateNext().textContent = this.#project.title;
-    }
-
-    if (this.#project.pubStatement) {
-      const result = dom.evaluate(
-        "/tei:TEI/tei:teiHeader//tei:publicationStmt/tei:p",
-        dom,
-        (prefix) => (prefix === "tei" ? TEI_NS : null),
-        XPathResult.ANY_TYPE,
-        null,
-      );
-      result.iterateNext().textContent = this.#project.pubStatement;
-    }
-
-    {
-      const result = dom.evaluate(
-        "/tei:TEI/tei:facsimile",
-        dom,
-        (prefix) => (prefix === "tei" ? TEI_NS : null),
-        XPathResult.ANY_TYPE,
-        null,
-      );
-      Object.entries(this.#documents)
-        .map((entry) => entry[1].images || [])
-        .flat()
-        .forEach((image) => {
-          if (!image.url || !image.type) return;
-
-          if (image.type === "URL") {
-            const graphic = dom.createElementNS(TEI_NS, "graphic");
-            graphic.setAttribute("id", image.id);
-            graphic.setAttribute("url", image.url);
-            result.iterateNext().append(graphic);
-          }
-
-          // TODO: what about IIIF?!?
-        });
-    }
-
-    {
-      const result = dom.evaluate(
-        "/tei:TEI",
-        dom,
-        (prefix) => (prefix === "tei" ? TEI_NS : null),
-        XPathResult.ANY_TYPE,
-        null,
-      );
-      const elm = result.iterateNext();
-
-      Object.entries(this.#documents)
-        .map((entry) => entry[1].document)
-        .forEach((doc) => {
-          const parser = new DOMParser();
-          const domDoc = parser.parseFromString(doc, "text/xml");
-
-          if (
-            !domDoc.firstChild ||
-            // What about TEICorpus? TODO
-            domDoc.firstChild.tagName !== "TEI" ||
-            domDoc.firstChild.namespaceURI !== TEI_NS
-          ) {
-            return;
-          }
-
-          elm.append(domDoc.firstChild);
-        });
+    for (const helper of helpers) {
+      helper.setter(dom, this);
     }
 
     // TODO: authors
