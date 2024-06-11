@@ -1,5 +1,23 @@
 const TEI_NS = "http://www.tei-c.org/ns/1.0";
 
+const TEITitle = (dom) =>
+  dom.evaluate(
+    "/tei:TEI/tei:teiHeader//tei:title",
+    dom,
+    (prefix) => (prefix === "tei" ? TEI_NS : null),
+    XPathResult.ANY_TYPE,
+    null,
+  );
+
+const TEIPubStatement = (dom) =>
+  dom.evaluate(
+    "/tei:TEI/tei:teiHeader//tei:publicationStmt/tei:p",
+    dom,
+    (prefix) => (prefix === "tei" ? TEI_NS : null),
+    XPathResult.ANY_TYPE,
+    null,
+  );
+
 const helpers = [
   // Template
   { setter: (dom, data) => {}, getter: (dom, data) => {} },
@@ -8,34 +26,36 @@ const helpers = [
   {
     setter: (dom, data) => {
       if (data.project.title) {
-        const result = dom.evaluate(
-          "/tei:TEI/tei:teiHeader//tei:title",
-          dom,
-          (prefix) => (prefix === "tei" ? TEI_NS : null),
-          XPathResult.ANY_TYPE,
-          null,
-        );
-        result.iterateNext().textContent = data.project.title;
+        TEITitle(dom).iterateNext().textContent = data.project.title;
       }
     },
-    getter: (dom, data) => {},
+    getter: (dom, data) => {
+      const elm = TEITitle(dom).iterateNext();
+
+      if (elm) {
+        const project = data.project || {};
+        project.title = elm.textContent;
+        data.project = project;
+      }
+    },
   },
 
   // Publication statements
   {
     setter: (dom, data) => {
       if (data.project.pubStatement) {
-        const result = dom.evaluate(
-          "/tei:TEI/tei:teiHeader//tei:publicationStmt/tei:p",
-          dom,
-          (prefix) => (prefix === "tei" ? TEI_NS : null),
-          XPathResult.ANY_TYPE,
-          null,
-        );
-        result.iterateNext().textContent = data.project.pubStatement;
+        TEIPubStatement().iterateNext().textContent = data.project.pubStatement;
       }
     },
-    getter: (dom, data) => {},
+    getter: (dom, data) => {
+      const elm = TEIPubStatement(dom).iterateNext();
+
+      if (elm) {
+        const project = data.project || {};
+        project.pubStatement = elm.textContent;
+        data.project = project;
+      }
+    },
   },
 
   // Documents and languages
