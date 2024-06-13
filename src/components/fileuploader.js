@@ -15,10 +15,21 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
   const [genericErrorDialogShown, setGenericErrorDialogShown] =
     React.useState(false);
   const [noDisceptDialogShown, setNoDisceptDialogShown] = React.useState(false);
+  const [loadCompletedDialogShown, setLoadCompletedDialogShown] =
+    React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
 
+  function fileLoaded() {
+    setLoadCompletedDialogShown(true);
+  }
+
+  function closeLoadCompletedDialog() {
+    setLoadCompletedDialogShown(false);
+    onChange();
+  }
+
   function readFile(file) {
-    data.readFromFile(file).then(onChange, catchError);
+    data.readFromFile(file).then(fileLoaded, catchError);
   }
 
   if (file !== fileUploaded) {
@@ -70,6 +81,23 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
 
   return (
     <>
+      <Dialog
+        open={loadCompletedDialogShown}
+        onClose={closeLoadCompletedDialog}
+        aria-labelledby="loadCompleted-dialog"
+        aria-describedby="loadCompleted-dialog-desc"
+      >
+        <DialogTitle id="loadCompleted-dialog">{"Data imported!"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="loadCompleted-dialog-desc">
+            The file has been correctly imported!
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeLoadCompletedDialog}>OK</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={overwriteDialogShown}
         onClose={closeOverwriteDialog}
