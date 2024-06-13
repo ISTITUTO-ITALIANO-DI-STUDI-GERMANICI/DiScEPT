@@ -7,6 +7,7 @@ import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
 import DisceptFileUploader from "./components/fileuploader.js";
 import Onboarding from "./components/onboarding.js";
+import PreventClosing from "./components/preventclosing.js";
 
 import { IntroView, IntroOnboarding } from "./views/intro.js";
 import { ProjectView, ProjectOnboarding } from "./views/project.js";
@@ -113,6 +114,8 @@ class App extends React.Component {
           onCompleted={onboardingCompleted}
           steps={steps[this.state.currentStep].onboarding}
         />
+
+        <PreventClosing />
       </React.Fragment>
     );
   }
