@@ -1,0 +1,46 @@
+name: Gen
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  gen:
+    name: Make build
+    runs-on: ubuntu-22.04
+    env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Use Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Run
+        shell: bash
+        run: |
+          npm i
+          npm run build
+
+      - name: Commit
+        run: |
+          git config --global user.name "Tiziana Mancinelli"
+          git config --global user.email "tiziana.mancinelli@gmail.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY
+          git checkout "${GITHUB_REF:11}"
+          git fetch -a -p
+          git checkout origin/build -b build
+          git pull origin build:build
+          git rm static -r
+          mv build/* .
+          rm build node_modules -rf
+          git add static *
+          git commit -a -m "New build"
+          git push origin build:build || echo "Nothing to do"
