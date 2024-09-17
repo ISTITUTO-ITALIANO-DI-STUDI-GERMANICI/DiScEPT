@@ -28,12 +28,17 @@ const documentTemplate = (
  <teiHeader>
   <fileDesc>
    <titleStmt>
-    <title>${data.project.title} - language: ${language}</title>
+    <title>${data.project.title}</title>
    </titleStmt>
    <publicationStmt>
     <p>${language}</p>
    </publicationStmt>
   </fileDesc>
+  <profileDesc>
+   <langUsage>
+    <language ident="${language}">${language}</language>
+   </langUsage>
+  </profileDesc>
  </teiHeader>
  <text>
   <body>
