@@ -188,31 +188,54 @@ const helpers = [
 
   // Images
   {
-    getter: (dom, data) => {},
+    getter: (dom, data) => {
+      // TODO
+    },
+
     setter: (dom, data) => {
-      const result = dom.evaluate(
-        "/tei:TEI/tei:facsimile",
-        dom,
-        (prefix) => (prefix === "tei" ? TEI_NS : null),
-        XPathResult.ANY_TYPE,
-        null,
-      );
       data
         .getDocumentLanguages()
-        .map((language) => data.getImages(language))
-        .map((images) => images || [])
-        .flat()
-        .forEach((image) => {
-          if (!image.url || !image.type) return;
+        .map((language) => ({images: data.getImages(language) || [], language }))
+        .forEach((obj) => {
+          const langUsageResult = dom.evaluate(
+            `//tei:TEI/tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language[@ident="${obj.language}"]`,
+            dom,
+            (prefix) => (prefix === "tei" ? TEI_NS : null),
+            XPathResult.ANY_TYPE,
+            null,
+          );
+          const languageElm = langUsageResult.iterateNext();
+          if (!languageElm) { console.log(`Unable to find an object with language ${obj.language}`); return; }
 
-          if (image.type === "URL") {
-            const graphic = dom.createElementNS(TEI_NS, "graphic");
-            graphic.setAttribute("id", image.id);
-            graphic.setAttribute("url", image.url);
-            result.iterateNext().append(graphic);
+          let teiElm = languageElm;
+          while (teiElm) {
+             if (teiElm.tagName === "TEI") break;
+
+             teiElm = teiElm.parentElement;
           }
 
-          // TODO: what about IIIF?!?
+          if (!teiElm) { console.log("Unable to find the TEI element?!?"); return; }
+
+          let facsimileElm = Array.from(teiElm.children).find(a => a.tagName === "facsimile");
+          if (!facsimileElm) {
+            facsimileElm = dom.createElementNS(TEI_NS, "facsimile");
+            teiElm.appendChild(facsimileElm);
+          }
+
+          obj.images.forEach(image => {
+            if (!image || !image.url || !image.type) return;
+
+            if (image.type === "URL") {
+              const graphic = dom.createElementNS(TEI_NS, "graphic");
+              graphic.setAttribute("id", image.id);
+              graphic.setAttribute("url", image.url);
+              facsimileElm.append(graphic);
+            }
+
+            // TODO: what about IIIF?!?
+          });
+
+          // TODO: linking the image to the target! see (ids)
         });
     },
   },
@@ -525,7 +548,6 @@ class Data {
     }
 
     // TODO: extract the project details
-    // TODO: extract the images
 
     this.#changed = false;
   }
@@ -542,7 +564,6 @@ class Data {
    <publicationStmt><p></p></publicationStmt>
   </fileDesc>
  </teiHeader>
- <facsimile></facsimile>
  <standOff></standOff>
 </TEI>`,
       "text/xml",
