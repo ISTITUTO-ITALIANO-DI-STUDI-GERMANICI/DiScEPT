@@ -27,12 +27,11 @@ const TEIStandOffStatement = (dom) =>
     null,
   );
 
-
 const helpers = [
   // Template
   {
     setter: (dom, data) => {},
-    getter: (dom, data) => {}
+    getter: (dom, data) => {},
   },
 
   // Title
@@ -75,28 +74,28 @@ const helpers = [
   {
     getter: (dom, data) =>
       Array.from(dom.firstChild.children)
-      .filter(a => a.tagName === "TEI")
-      .map((a) => {
-        const languageResult = dom.evaluate(
-          "./tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language",
-          a,
-          (prefix) => (prefix === "tei" ? TEI_NS : null),
-          XPathResult.ANY_TYPE,
-          null,
-        );
-        const language = languageResult.iterateNext();
-        if (!language) return null;
+        .filter((a) => a.tagName === "TEI")
+        .map((a) => {
+          const languageResult = dom.evaluate(
+            "./tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language",
+            a,
+            (prefix) => (prefix === "tei" ? TEI_NS : null),
+            XPathResult.ANY_TYPE,
+            null,
+          );
+          const language = languageResult.iterateNext();
+          if (!language) return null;
 
-        const ident = language.getAttribute("ident");
-        if (!ident) return null;
+          const ident = language.getAttribute("ident");
+          if (!ident) return null;
 
-        return {
-          language: ident,
-          document: a.outerHTML
-        }
-      })
-      .filter((a) => a !== null)
-      .forEach((a) => data.addDocumentPerLanguage(a.language, a.document)),
+          return {
+            language: ident,
+            document: a.outerHTML,
+          };
+        })
+        .filter((a) => a !== null)
+        .forEach((a) => data.addDocumentPerLanguage(a.language, a.document)),
     setter: (dom, data) => {
       const result = dom.evaluate(
         "/tei:TEI",
@@ -111,7 +110,7 @@ const helpers = [
         .getDocumentLanguages()
         .map((language) => ({
           language,
-          doc: data.getDocumentPerLanguage(language)
+          doc: data.getDocumentPerLanguage(language),
         }))
         .forEach((obj) => {
           const parser = new DOMParser();
@@ -189,13 +188,73 @@ const helpers = [
   // Images
   {
     getter: (dom, data) => {
-      // TODO
+      const elm = TEIStandOffStatement(dom).iterateNext();
+      if (!elm) return;
+
+      const joinList = {};
+      Array.from(elm.children)
+        .filter((a) => a.tagName === "join")
+        .filter((a) => a.getAttribute("facs"))
+        .forEach((join) => {
+          joinList[join.getAttribute("facs").replace(/^#/, "")] = join
+            .getAttribute("target")
+            .split(" ")
+            .map((id) => id.replace(/^#/, ""));
+        });
+
+      const langUsageResult = dom.evaluate(
+        `//tei:TEI/tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language`,
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+
+      while (true) {
+        const languageElm = langUsageResult.iterateNext();
+        if (!languageElm) break;
+
+        const language = languageElm.getAttribute("ident");
+
+        let teiElm = languageElm;
+        while (teiElm) {
+          if (teiElm.tagName === "TEI") break;
+
+          teiElm = teiElm.parentElement;
+        }
+
+        const facsimileElm = Array.from(teiElm.children).find(
+          (a) => a.tagName === "facsimile",
+        );
+        if (!facsimileElm) continue;
+
+        Array.from(facsimileElm.children)
+          .filter((a) => a.tagName === "graphic")
+          .forEach((graphic) => {
+            const id = graphic.getAttribute("xml:id");
+            if (!id || !joinList[id]) return;
+
+            data.addImage(
+              language,
+              id,
+              joinList[id],
+              graphic.getAttribute("url"),
+              /* TODO: type */ "URL",
+            );
+          });
+      }
     },
 
     setter: (dom, data) => {
+      // Cleanup existing facsimile elements.
+      data.getDocumentLanguages();
+
       data
         .getDocumentLanguages()
-        .map((language) => ({images: data.getImages(language) || [], language }))
+        .map((language) => ({
+          images: data.getImages(language) || [],
+          language,
+        }))
         .forEach((obj) => {
           const langUsageResult = dom.evaluate(
             `//tei:TEI/tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language[@ident="${obj.language}"]`,
@@ -205,29 +264,41 @@ const helpers = [
             null,
           );
           const languageElm = langUsageResult.iterateNext();
-          if (!languageElm) { console.log(`Unable to find an object with language ${obj.language}`); return; }
+          if (!languageElm) {
+            console.log(
+              `Unable to find an object with language ${obj.language}`,
+            );
+            return;
+          }
 
           let teiElm = languageElm;
           while (teiElm) {
-             if (teiElm.tagName === "TEI") break;
+            if (teiElm.tagName === "TEI") break;
 
-             teiElm = teiElm.parentElement;
+            teiElm = teiElm.parentElement;
           }
 
-          if (!teiElm) { console.log("Unable to find the TEI element?!?"); return; }
+          if (!teiElm) {
+            console.log("Unable to find the TEI element?!?");
+            return;
+          }
 
-          let facsimileElm = Array.from(teiElm.children).find(a => a.tagName === "facsimile");
+          let facsimileElm = Array.from(teiElm.children).find(
+            (a) => a.tagName === "facsimile",
+          );
           if (!facsimileElm) {
             facsimileElm = dom.createElementNS(TEI_NS, "facsimile");
             teiElm.appendChild(facsimileElm);
           }
 
-          obj.images.forEach(image => {
+          Array.from(facsimileElm.children).forEach((child) => child.remove());
+
+          obj.images.forEach((image) => {
             if (!image || !image.url || !image.type) return;
 
             if (image.type === "URL") {
               const graphic = dom.createElementNS(TEI_NS, "graphic");
-              graphic.setAttribute("id", image.id);
+              graphic.setAttribute("xml:id", image.id);
               graphic.setAttribute("url", image.url);
               facsimileElm.append(graphic);
             }
@@ -235,7 +306,17 @@ const helpers = [
             // TODO: what about IIIF?!?
           });
 
-          // TODO: linking the image to the target! see (ids)
+          const standOff = TEIStandOffStatement(dom).iterateNext();
+
+          obj.images.forEach((image) => {
+            const joinA = dom.createElementNS(TEI_NS, "join");
+            joinA.setAttribute(
+              "target",
+              image.ids.map((id) => "#" + id).join(" "),
+            );
+            joinA.setAttribute("facs", "#" + image.id);
+            standOff.appendChild(joinA);
+          });
         });
     },
   },
@@ -247,74 +328,88 @@ const helpers = [
       if (!elm) return;
 
       const joinList = {};
-      Array.from(elm.children).filter((a) => a.tagName === "join").forEach(join => {
-        joinList[join.getAttribute("xml:id")] = join.getAttribute("target").split(" ").map(id => id.replace(/^#/, ""));
-      });
+      Array.from(elm.children)
+        .filter((a) => a.tagName === "join")
+        .forEach((join) => {
+          joinList[join.getAttribute("xml:id")] = join
+            .getAttribute("target")
+            .split(" ")
+            .map((id) => id.replace(/^#/, ""));
+        });
 
       const alignments = [];
-      Array.from(elm.children).filter(a => a.tagName === "linkGrp" && a.getAttribute("type") === "translation").forEach(linkGrp => {
-        const aligns = [];
+      Array.from(elm.children)
+        .filter(
+          (a) =>
+            a.tagName === "linkGrp" && a.getAttribute("type") === "translation",
+        )
+        .forEach((linkGrp) => {
+          const aligns = [];
 
-        let idA = null;
-        let idB = null;
+          let idA = null;
+          let idB = null;
 
-        Array.from(linkGrp.children).filter(a => a.tagName === "link").forEach(link => {
-          const targets = link.getAttribute("target").split(" ").map(id => id.replace(/^#/, ""));
-          if (targets.length != 2) {
-            console.log("Invalid link with wrong target", link);
-            return;
+          Array.from(linkGrp.children)
+            .filter((a) => a.tagName === "link")
+            .forEach((link) => {
+              const targets = link
+                .getAttribute("target")
+                .split(" ")
+                .map((id) => id.replace(/^#/, ""));
+              if (targets.length != 2) {
+                console.log("Invalid link with wrong target", link);
+                return;
+              }
+
+              const obj = {
+                a: targets[0] in joinList ? joinList[targets[0]] : [targets[0]],
+                b: targets[1] in joinList ? joinList[targets[1]] : [targets[1]],
+              };
+              aligns.push(obj);
+
+              if (idA === null) idA = obj.a[0];
+              if (idB === null) idB = obj.b[0];
+            });
+
+          if (!idA || !idB) return;
+
+          function findLangFromElm(elm) {
+            while (elm) {
+              if (elm.tagName === "TEI") {
+                const languageResult = dom.evaluate(
+                  "./tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language",
+                  elm,
+                  (prefix) => (prefix === "tei" ? TEI_NS : null),
+                  XPathResult.ANY_TYPE,
+                  null,
+                );
+                const language = languageResult.iterateNext();
+                if (!language) return null;
+
+                return language.getAttribute("ident");
+              }
+
+              elm = elm.parentElement;
+            }
           }
 
-          const obj = {
-            a: targets[0] in joinList ? joinList[targets[0]] : [targets[0]],
-            b: targets[1] in joinList ? joinList[targets[1]] : [targets[1]]
-          };
-          aligns.push(obj);
+          function findLangFromXmlId(elm, id) {
+            if (elm.getAttribute("xml:id") === id) return findLangFromElm(elm);
 
-          if (idA === null) idA = obj.a[0];
-          if (idB === null) idB = obj.b[0];
-        });
-
-        if (!idA || !idB) return;
-
-        function findLangFromElm(elm) {
-          while (elm) {
-            if (elm.tagName === "TEI") {
-              const languageResult = dom.evaluate(
-                "./tei:teiHeader/tei:profileDesc/tei:langUsage/tei:language",
-                elm,
-                (prefix) => (prefix === "tei" ? TEI_NS : null),
-                XPathResult.ANY_TYPE,
-                null,
-              );
-              const language = languageResult.iterateNext();
-              if (!language) return null;
-
-              return language.getAttribute("ident");
+            for (const child of Array.from(elm.children)) {
+              const found = findLangFromXmlId(child, id);
+              if (found) return found;
             }
 
-            elm = elm.parentElement;
+            return null;
           }
 
-        }
-
-        function findLangFromXmlId(elm, id) {
-          if (elm.getAttribute("xml:id") === id) return findLangFromElm(elm);
-
-          for (const child of Array.from(elm.children)) {
-            const found = findLangFromXmlId(child, id);
-            if (found) return found;
-          }
-
-          return null;
-        }
-
-        alignments.push({
-          alignments: aligns,
-          langA: findLangFromXmlId(dom.firstChild, idA),
-          langB: findLangFromXmlId(dom.firstChild, idB),
+          alignments.push({
+            alignments: aligns,
+            langA: findLangFromXmlId(dom.firstChild, idA),
+            langB: findLangFromXmlId(dom.firstChild, idB),
+          });
         });
-      });
 
       data.alignments = alignments;
     },
@@ -324,15 +419,18 @@ const helpers = [
       const standOff = TEIStandOffStatement(dom).iterateNext();
 
       for (const alignment of data.alignments) {
-        const linkGrp = dom.createElementNS(TEI_NS, 'linkGrp');
-        linkGrp.setAttribute('type', 'translation');
+        const linkGrp = dom.createElementNS(TEI_NS, "linkGrp");
+        linkGrp.setAttribute("type", "translation");
 
         for (const align of alignment.alignments) {
           let joinIdA = align.a[0];
           if (align.a.length > 1) {
             joinIdA = `join${++linkId}`;
-            const joinA = dom.createElementNS(TEI_NS, 'join');
-            joinA.setAttribute("target", align.a.map(id => "#" + id).join(" "));
+            const joinA = dom.createElementNS(TEI_NS, "join");
+            joinA.setAttribute(
+              "target",
+              align.a.map((id) => "#" + id).join(" "),
+            );
             joinA.setAttribute("xml:id", joinIdA);
             standOff.appendChild(joinA);
           }
@@ -340,21 +438,24 @@ const helpers = [
           let joinIdB = align.b[0];
           if (align.b.length > 1) {
             joinIdB = `join${++linkId}`;
-            const joinB = dom.createElementNS(TEI_NS, 'join');
-            joinB.setAttribute("target", align.b.map(id => "#" + id).join(" "));
+            const joinB = dom.createElementNS(TEI_NS, "join");
+            joinB.setAttribute(
+              "target",
+              align.b.map((id) => "#" + id).join(" "),
+            );
             joinB.setAttribute("xml:id", joinIdB);
             standOff.appendChild(joinB);
           }
 
-          const link = dom.createElementNS(TEI_NS, 'link');
-          link.setAttribute('target', `#${joinIdA} #${joinIdB}`);
+          const link = dom.createElementNS(TEI_NS, "link");
+          link.setAttribute("target", `#${joinIdA} #${joinIdB}`);
           linkGrp.appendChild(link);
         }
 
         standOff.appendChild(linkGrp);
       }
-    }
-  }
+    },
+  },
 ];
 
 class Data {
@@ -429,7 +530,7 @@ class Data {
     if (a) {
       return {
         alignments: a.alignments,
-        swap: false
+        swap: false,
       };
     }
 
@@ -437,7 +538,7 @@ class Data {
     if (a) {
       return {
         alignments: a.alignments,
-        swap: true
+        swap: true,
       };
     }
 
@@ -452,7 +553,7 @@ class Data {
 
     return a.alignments.map((obj) => ({
       a: obj.b,
-      b: obj.a
+      b: obj.a,
     }));
   }
 
@@ -472,10 +573,12 @@ class Data {
       this.#alignments.push({
         langA,
         langB,
-        alignments: [{
-          a: idsA,
-          b: idsB
-        }],
+        alignments: [
+          {
+            a: idsA,
+            b: idsB,
+          },
+        ],
       });
       return;
     }
@@ -485,14 +588,14 @@ class Data {
     if (!a.swap) {
       a.alignments.push({
         a: idsA,
-        b: idsB
+        b: idsB,
       });
       return;
     }
 
     a.alignments.push({
       a: idsB,
-      b: idsA
+      b: idsA,
     });
   }
 
@@ -513,7 +616,7 @@ class Data {
       id,
       ids,
       url,
-      type
+      type,
     });
   }
 

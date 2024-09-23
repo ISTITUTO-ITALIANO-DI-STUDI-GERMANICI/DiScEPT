@@ -15,14 +15,18 @@ import AlignTab from "../components/aligntab.js";
 
 import data from "../Data.js";
 
+const TEI_NS = "http://www.tei-c.org/ns/1.0";
+
 class AlignmentView extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       tabALanguage: "",
       tabASelections: [],
+      tabARefreshNeeded: 0,
       tabBLanguage: "",
       tabBSelections: [],
+      tabBRefreshNeeded: 0,
       listRefreshNeeded: 0,
     };
   }
@@ -30,6 +34,79 @@ class AlignmentView extends React.Component {
   render() {
     const tabAref = React.createRef();
     const tabBref = React.createRef();
+
+    const tokenizeLink = () => {
+      if (this.state.tabASelections) {
+        tokenize(true, this.state.tabALanguage, this.state.tabASelections);
+      } else {
+        tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
+      }
+    };
+
+    const tokenizeInternal = (elm) => {
+      let changed = false;
+      for (const node of Array.from(elm.childNodes)) {
+        switch (node.nodeType) {
+          case Node.ELEMENT_NODE: {
+            if (tokenizeInternal(node)) {
+              changed = true;
+            }
+            break;
+          }
+
+          case Node.TEXT_NODE: {
+            const text = node.textContent.trim().split(/\s+/);
+            if (text.length <= 1) break;
+
+            text.forEach((word) => {
+              const elm = node.ownerDocument.createElementNS(TEI_NS, "w");
+              elm.textContent = word;
+              node.parentElement.insertBefore(elm, node);
+
+              node.parentElement.insertBefore(
+                node.ownerDocument.createTextNode(" "),
+                node,
+              );
+            });
+
+            node.remove();
+            changed = true;
+            break;
+          }
+        }
+      }
+
+      return changed;
+    };
+
+    const tokenize = (isA, language, selections) => {
+      if (!selections.length) return;
+
+      let changed = false;
+
+      selections.forEach((selection) => {
+        if (tokenizeInternal(selection.teiElm)) {
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        data.updateDocumentPerLanguage(
+          language,
+          selections[0].teiElm.ownerDocument.firstElementChild.outerHTML,
+        );
+
+        if (isA) {
+          this.setState({
+            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+          });
+        } else {
+          this.setState({
+            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+          });
+        }
+      }
+    };
 
     const createLink = () => {
       const langAIds = [];
@@ -159,6 +236,7 @@ class AlignmentView extends React.Component {
                 updateSelection("tabA", domElm, teiElm, rootElm)
               }
               excludeLanguage={this.state.tabBLanguage}
+              refreshNeeded={this.state.tabARefreshNeeded}
             />
           </Grid>
           <Grid item xs={4.5}>
@@ -171,6 +249,7 @@ class AlignmentView extends React.Component {
                 updateSelection("tabB", domElm, teiElm, rootElm)
               }
               excludeLanguage={this.state.tabALanguage}
+              refreshNeeded={this.state.tabBRefreshNeeded}
             />
           </Grid>
           <Grid item xs={3}>
@@ -184,6 +263,19 @@ class AlignmentView extends React.Component {
               onClick={createLink}
             >
               Link selections
+            </Button>
+            <Button
+              id="tokenize-link"
+              variant="contained"
+              disabled={
+                (!this.state.tabASelections.length &&
+                  !this.state.tabBSelections.length) ||
+                (this.state.tabASelections.length &&
+                  this.state.tabBSelections.length)
+              }
+              onClick={tokenizeLink}
+            >
+              Tokenize selection
             </Button>
             <List key={"list-" + this.state.listRefreshNeeded}>
               {data

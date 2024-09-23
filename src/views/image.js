@@ -149,7 +149,10 @@ class ImageView extends React.Component {
                 label="Type"
                 onChange={handleImageTypeChange}
               >
-                <MenuItem value="IIIF">IIIF endpoint</MenuItem>
+                // TODO: We are not ready for IIF yet...
+                <MenuItem value="IIIF" disabled>
+                  IIIF endpoint
+                </MenuItem>
                 <MenuItem value="URL">URL</MenuItem>
               </Select>
             </FormControl>
