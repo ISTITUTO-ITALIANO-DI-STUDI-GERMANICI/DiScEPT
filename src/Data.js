@@ -640,7 +640,11 @@ class Data {
     }
 
     // TEI/text is not our model.
-    if (Array.from(dom.firstElementChild.children).find((a) => a.tagName === "text")) {
+    if (
+      Array.from(dom.firstElementChild.children).find(
+        (a) => a.tagName === "text",
+      )
+    ) {
       throw new Error(Data.ERR_NO_DISCEPT);
     }
 

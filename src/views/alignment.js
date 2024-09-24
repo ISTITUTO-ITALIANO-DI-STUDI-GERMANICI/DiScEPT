@@ -2,6 +2,7 @@ import React from "react";
 
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
+import ButtonGroup from "@mui/material/ButtonGroup";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import List from "@mui/material/List";
@@ -12,6 +13,7 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import AlignTab from "../components/aligntab.js";
+import AutomagicButton from "../components/automagicbutton.js";
 
 import data from "../Data.js";
 
@@ -43,6 +45,37 @@ class AlignmentView extends React.Component {
       }
     };
 
+    const tokenizeArray = (parts) => {
+      let whitespaces = [];
+      let current = "";
+      const values = [];
+
+      function bestOf(whitespaces) {
+        if (whitespaces.includes("\n")) return "\n";
+        return " ";
+      }
+
+      for (const part of parts) {
+        if (/\s/.test(part)) {
+          whitespaces.push(part);
+          continue;
+        }
+
+        if (current !== "") {
+          values.push(current + bestOf(whitespaces));
+        }
+
+        current = part;
+        whitespaces = [];
+      }
+
+      if (current !== "") {
+        values.push(current + bestOf(whitespaces));
+      }
+
+      return values;
+    };
+
     const tokenizeInternal = (elm) => {
       let changed = false;
       for (const node of Array.from(elm.childNodes)) {
@@ -55,7 +88,9 @@ class AlignmentView extends React.Component {
           }
 
           case Node.TEXT_NODE: {
-            const text = node.textContent.trim().split(/\s+/);
+            const text = tokenizeArray(
+              node.textContent.trim().split(/(?=\s)|(?<=\s)/g),
+            );
             if (text.length <= 1) break;
 
             text.forEach((word) => {
@@ -253,30 +288,38 @@ class AlignmentView extends React.Component {
             />
           </Grid>
           <Grid item xs={3}>
-            <Button
-              id="alignment-link"
-              variant="contained"
-              disabled={
-                !this.state.tabASelections.length ||
-                !this.state.tabBSelections.length
-              }
-              onClick={createLink}
-            >
-              Link selections
-            </Button>
-            <Button
-              id="tokenize-link"
-              variant="contained"
-              disabled={
-                (!this.state.tabASelections.length &&
-                  !this.state.tabBSelections.length) ||
-                (this.state.tabASelections.length &&
-                  this.state.tabBSelections.length)
-              }
-              onClick={tokenizeLink}
-            >
-              Tokenize selection
-            </Button>
+            <ButtonGroup aria-label="button group" orientation="vertical">
+              <Button
+                id="alignment-link"
+                variant="contained"
+                disabled={
+                  !this.state.tabASelections.length ||
+                  !this.state.tabBSelections.length
+                }
+                onClick={createLink}
+              >
+                Link selections
+              </Button>
+              <Button
+                id="tokenize-link"
+                variant="contained"
+                disabled={
+                  (!this.state.tabASelections.length &&
+                    !this.state.tabBSelections.length) ||
+                  (this.state.tabASelections.length &&
+                    this.state.tabBSelections.length)
+                }
+                onClick={tokenizeLink}
+              >
+                Tokenize selection
+              </Button>
+              <AutomagicButton
+                languageA={this.state.tabALanguage}
+                languageB={this.state.tabBLanguage}
+              >
+                AI alignment
+              </AutomagicButton>
+            </ButtonGroup>
             <List key={"list-" + this.state.listRefreshNeeded}>
               {data
                 .getAlignments(this.state.tabALanguage, this.state.tabBLanguage)
