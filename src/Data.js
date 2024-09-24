@@ -73,7 +73,7 @@ const helpers = [
   // Documents and languages
   {
     getter: (dom, data) =>
-      Array.from(dom.firstChild.children)
+      Array.from(dom.firstElementChild.children)
         .filter((a) => a.tagName === "TEI")
         .map((a) => {
           const languageResult = dom.evaluate(
@@ -117,10 +117,10 @@ const helpers = [
           const domDoc = parser.parseFromString(obj.doc, "text/xml");
 
           if (
-            !domDoc.firstChild ||
+            !domDoc.firstElementChild ||
             // What about TEICorpus? TODO
-            domDoc.firstChild.tagName !== "TEI" ||
-            domDoc.firstChild.namespaceURI !== TEI_NS
+            domDoc.firstElementChild.tagName !== "TEI" ||
+            domDoc.firstElementChild.namespaceURI !== TEI_NS
           ) {
             return;
           }
@@ -135,7 +135,7 @@ const helpers = [
           let teiHeader = teiHeaderResult.iterateNext();
           if (!teiHeader) {
             teiHeader = domDoc.createElementNS(TEI_NS, "teiHeader");
-            domDoc.firstChild.appendChild(teiHeader);
+            domDoc.firstElementChild.appendChild(teiHeader);
           }
 
           const profileDescResult = domDoc.evaluate(
@@ -180,7 +180,7 @@ const helpers = [
           language.setAttribute("ident", obj.language);
           language.textContent = obj.language;
 
-          elm.append(domDoc.firstChild);
+          elm.append(domDoc.firstElementChild);
         });
     },
   },
@@ -406,8 +406,8 @@ const helpers = [
 
           alignments.push({
             alignments: aligns,
-            langA: findLangFromXmlId(dom.firstChild, idA),
-            langB: findLangFromXmlId(dom.firstChild, idB),
+            langA: findLangFromXmlId(dom.firstElementChild, idA),
+            langB: findLangFromXmlId(dom.firstElementChild, idB),
           });
         });
 
@@ -631,16 +631,16 @@ class Data {
     const dom = parser.parseFromString(await file.text(), "text/xml");
 
     if (
-      !dom.firstChild ||
+      !dom.firstElementChild ||
       // What about TEICorpus? TODO
-      dom.firstChild.tagName !== "TEI" ||
-      dom.firstChild.namespaceURI !== TEI_NS
+      dom.firstElementChild.tagName !== "TEI" ||
+      dom.firstElementChild.namespaceURI !== TEI_NS
     ) {
       throw new Error(Data.ERR_INVALID_TYPE);
     }
 
     // TEI/text is not our model.
-    if (Array.from(dom.firstChild.children).find((a) => a.tagName === "text")) {
+    if (Array.from(dom.firstElementChild.children).find((a) => a.tagName === "text")) {
       throw new Error(Data.ERR_NO_DISCEPT);
     }
 
