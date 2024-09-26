@@ -49,7 +49,7 @@ function FinalView() {
         porta.
       </p>
       <Button variant="contained" onClick={downloadTEI}>
-        TEI/XML DiSCePT file
+        TEI/XML DiScEPT file
       </Button>
 
       <p>

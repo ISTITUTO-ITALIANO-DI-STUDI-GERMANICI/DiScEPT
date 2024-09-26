@@ -3,7 +3,6 @@ import { styled } from "@mui/material/styles";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import IconButton from "@mui/material/IconButton";
 import HelpIcon from "@mui/icons-material/Help";
@@ -32,9 +31,14 @@ export default function DisceptAppBar({ fileUploaded, onHelp }) {
   return (
     <AppBar position="static">
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          DiSCePT
-        </Typography>
+        <Box
+          component="img"
+          sx={{
+            height: 50,
+          }}
+          alt="DiScEPT"
+          src="assets/logo.png"
+        />
 
         <Box sx={{ flexGrow: 1 }} />
 
