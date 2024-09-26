@@ -149,7 +149,7 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
         <DialogTitle id="no-discept">{"Valid TEI But..."}</DialogTitle>
         <DialogContent>
           <DialogContentText id="no-discept-desc">
-            The uploaded file does not look like a DiSCePT TEI model. Do you
+            The uploaded file does not look like a DiScEPT TEI model. Do you
             want to import it as a language instead?
           </DialogContentText>
           <TextField

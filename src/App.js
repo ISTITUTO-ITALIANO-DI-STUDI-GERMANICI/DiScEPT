@@ -2,6 +2,7 @@ import * as React from "react";
 
 import Grid from "@mui/material/Grid";
 import CssBaseline from "@mui/material/CssBaseline";
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
@@ -15,6 +16,7 @@ import { EditorView, EditorOnboarding } from "./views/editor.js";
 import { AlignmentView, AlignmentOnboarding } from "./views/alignment.js";
 import { ImageView, ImageOnboarding } from "./views/image.js";
 import { FinalView, FinalOnboarding } from "./views/final.js";
+import { themeOptions } from "./Theme.js"
 
 const steps = [
   {
@@ -56,6 +58,8 @@ const steps = [
   },
 ];
 
+const theme = createTheme(themeOptions);
+
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -90,7 +94,7 @@ class App extends React.Component {
     };
 
     return (
-      <React.Fragment>
+      <ThemeProvider theme={theme}>
         <CssBaseline />
 
         <DisceptAppBar fileUploaded={fileUploaded} onHelp={runOnboarding} />
@@ -116,7 +120,7 @@ class App extends React.Component {
         />
 
         <PreventClosing />
-      </React.Fragment>
+      </ThemeProvider>
     );
   }
 }
