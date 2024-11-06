@@ -37,48 +37,21 @@ function FinalView() {
       </Typography>
 
       <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi sit amet
-        augue justo. Vivamus quis sagittis massa. Fusce molestie id lorem vel
-        vehicula. Donec eu nibh vitae massa feugiat consectetur at non est.
-        Aenean ultricies ipsum ac nisl placerat, vitae vehicula lacus varius.
-        Pellentesque habitant morbi tristique senectus et netus et malesuada
-        fames ac turpis egestas. Ut sollicitudin pulvinar dictum. Quisque
-        ultricies gravida est. Cras sit amet sodales nisl. Proin iaculis
-        elementum odio, eget rutrum massa feugiat quis. Nam vestibulum vulputate
-        nisl, et ultrices arcu auctor in. Cras hendrerit efficitur ex vitae
-        porta.
+        You can download the file in TEI/XML or also in RDF/XML. Both formats provide structured data, but TEI/XML focuses on textual encoding for research, while RDF/XML emphasizes metadata and relationships. Choose the format that best suits your needs for data analysis or digital humanities projects.
       </p>
       <Button variant="contained" onClick={downloadTEI}>
         TEI/XML DiSCePT file
       </Button>
 
       <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi sit amet
-        augue justo. Vivamus quis sagittis massa. Fusce molestie id lorem vel
-        vehicula. Donec eu nibh vitae massa feugiat consectetur at non est.
-        Aenean ultricies ipsum ac nisl placerat, vitae vehicula lacus varius.
-        Pellentesque habitant morbi tristique senectus et netus et malesuada
-        fames ac turpis egestas. Ut sollicitudin pulvinar dictum. Quisque
-        ultricies gravida est. Cras sit amet sodales nisl. Proin iaculis
-        elementum odio, eget rutrum massa feugiat quis. Nam vestibulum vulputate
-        nisl, et ultrices arcu auctor in. Cras hendrerit efficitur ex vitae
-        porta.
+        You can also choose to publish your digital scholarly edition using the TEI Publisher tool. This tool offers a user-friendly interface for displaying and managing TEI-encoded texts, ensuring that your edition is accessible and well-presented. It simplifies the process, making digital publication more efficient and widely available.
       </p>
       <Button variant="contained" onClick={downloadTEIPublisherApp}>
         TEI-Publisher app
       </Button>
 
       <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi sit amet
-        augue justo. Vivamus quis sagittis massa. Fusce molestie id lorem vel
-        vehicula. Donec eu nibh vitae massa feugiat consectetur at non est.
-        Aenean ultricies ipsum ac nisl placerat, vitae vehicula lacus varius.
-        Pellentesque habitant morbi tristique senectus et netus et malesuada
-        fames ac turpis egestas. Ut sollicitudin pulvinar dictum. Quisque
-        ultricies gravida est. Cras sit amet sodales nisl. Proin iaculis
-        elementum odio, eget rutrum massa feugiat quis. Nam vestibulum vulputate
-        nisl, et ultrices arcu auctor in. Cras hendrerit efficitur ex vitae
-        porta.
+        Transforming your file solely into HTML is another option. HTML ensures your content is web-friendly and easily accessible through any browser. This format is ideal for creating interactive and visually appealing digital editions. It allows for seamless integration of multimedia elements, enhancing user experience and engagement with your scholarly work.
       </p>
       <Button variant="contained" onClick={showEmbeddedCode}>
         HTML embedded code
