@@ -1,65 +1,72 @@
-import * as React from "react";
+import * as React from "react"; // Import the React library
+import Grid from "@mui/material/Grid"; // Import Grid component from Material-UI
+import CssBaseline from "@mui/material/CssBaseline"; // Resets CSS across browsers
+import { ThemeProvider, createTheme } from '@mui/material/styles'; // For creating and applying themes
 
-import Grid from "@mui/material/Grid";
-import CssBaseline from "@mui/material/CssBaseline";
-
+// Custom components
 import DisceptAppBar from "./components/appbar.js";
 import DisceptStepper from "./components/stepper.js";
 import DisceptFileUploader from "./components/fileuploader.js";
 import Onboarding from "./components/onboarding.js";
 import PreventClosing from "./components/preventclosing.js";
 
+// Views and their onboarding components
 import { IntroView, IntroOnboarding } from "./views/intro.js";
 import { ProjectView, ProjectOnboarding } from "./views/project.js";
 import { EditorView, EditorOnboarding } from "./views/editor.js";
 import { AlignmentView, AlignmentOnboarding } from "./views/alignment.js";
 import { ImageView, ImageOnboarding } from "./views/image.js";
 import { FinalView, FinalOnboarding } from "./views/final.js";
+import { themeOptions } from "./Theme.js" // Import custom theme options
 
+// Define steps of the app, each with a view component and an optional onboarding process
 const steps = [
   {
-    label: "Intro",
-    description: "Read about this project!",
-    component: IntroView,
-    onboarding: IntroOnboarding,
+    label: "Intro", // Step 1: Introduction
+    description: "Read about this project!", // Step description
+    component: IntroView, // Corresponding view component
+    onboarding: IntroOnboarding, // Corresponding onboarding component
   },
   {
-    label: "Project description",
+    label: "Project description", // Step 2: Project description
     description: "Describe your project, the team members, the authors, etc.",
     component: ProjectView,
     onboarding: ProjectOnboarding,
   },
   {
-    label: "TEI and translations",
+    label: "TEI and translations", // Step 3: TEI editor and translation management
     description:
       "Create or upload your TEI documents and define the translation sources.",
     component: EditorView,
     onboarding: EditorOnboarding,
   },
   {
-    label: "Alignments",
+    label: "Alignments", // Step 4: Manage alignments between TEI documents
     description: "Align your TEI documents.",
     component: AlignmentView,
     onboarding: AlignmentOnboarding,
   },
   {
-    label: "Images",
+    label: "Images", // Step 5: Add images to the TEI documents
     description: "Add image resources to your TEI documents.",
     component: ImageView,
     onboarding: ImageOnboarding,
   },
   {
-    label: "Final steps",
+    label: "Final steps", // Step 6: Final step, finalize digital edition
     description: "Create your digital edition.",
     component: FinalView,
     onboarding: FinalOnboarding,
   },
 ];
 
+// Create a custom theme using the defined theme options
+const theme = createTheme(themeOptions);
+
 class App extends React.Component {
   constructor(props) {
     super(props);
-
+    // Initial state: Step 0, no file uploaded, onboarding not running
     this.state = {
       currentStep: 0,
       fileUploaded: null,
@@ -68,57 +75,70 @@ class App extends React.Component {
   }
 
   render() {
+    // Functional component for rendering the view of the current step
     const Item = ({ step }) => {
       const Component = steps[step].component;
-      return <Component />;
+      return <Component />; // Render the view component for the current step
     };
 
+    // Function to change the current step
     const changeStep = (id) => {
       this.setState({ currentStep: id });
     };
 
+    // Function to set the uploaded file in the state
     const fileUploaded = (fileUploaded) => {
       this.setState({ fileUploaded });
     };
 
+    // Function to start the onboarding process
     const runOnboarding = () => {
       this.setState({ runOnboarding: true });
     };
 
+    // Function to stop the onboarding process once it's completed
     const onboardingCompleted = () => {
       this.setState({ runOnboarding: false });
     };
 
     return (
-      <React.Fragment>
-        <CssBaseline />
+      // Apply the custom theme using ThemeProvider
+      <ThemeProvider theme={theme}>
+        <CssBaseline /> {/* Normalize CSS across browsers */}
 
+        {/* Top navigation bar with file upload functionality */}
         <DisceptAppBar fileUploaded={fileUploaded} onHelp={runOnboarding} />
 
+        {/* Grid layout for stepper and content area */}
         <Grid container spacing={2} sx={{ p: 3 }}>
           <Grid item xs={2}>
+            {/* Sidebar with stepper to navigate between steps */}
             <DisceptStepper steps={steps} onChange={changeStep} />
           </Grid>
           <Grid item xs={10}>
+            {/* Display the current step's content */}
             <Item step={this.state.currentStep} />
           </Grid>
         </Grid>
 
+        {/* Component for uploading files */}
         <DisceptFileUploader
           fileUploaded={this.state.fileUploaded}
-          onChange={() => changeStep(0)}
+          onChange={() => changeStep(0)} // Reset to first step after file upload
         />
 
+        {/* Onboarding component: shows guided instructions if onboarding is active */}
         <Onboarding
           run={this.state.runOnboarding}
-          onCompleted={onboardingCompleted}
-          steps={steps[this.state.currentStep].onboarding}
+          onCompleted={onboardingCompleted} // Stop onboarding once completed
+          steps={steps[this.state.currentStep].onboarding} // Show the relevant onboarding steps
         />
 
+        {/* Component that prevents closing the tab if there are unsaved changes */}
         <PreventClosing />
-      </React.Fragment>
+      </ThemeProvider>
     );
   }
 }
 
-export default App;
+export default App; // Export the main App component

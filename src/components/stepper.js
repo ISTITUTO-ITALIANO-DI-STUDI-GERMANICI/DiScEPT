@@ -1,3 +1,4 @@
+// Import necessary modules from React and Material UI
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Stepper from "@mui/material/Stepper";
@@ -7,25 +8,32 @@ import StepLabel from "@mui/material/StepLabel";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 
+// DisceptStepper Component - Renders a vertical stepper with a sequence of steps, displaying each step's label and description. Allows navigation between steps by clicking on labels.
 export default function DisceptStepper({ steps, onChange }) {
+  // State for tracking the currently active step
   const [activeStep, setActiveStep] = React.useState(0);
 
+  // Function to activate a specific step and trigger the onChange event
   const activate = (index) => {
     setActiveStep(index);
-    onChange(index);
+    onChange(index); // Notify parent component about the change in active step
   };
 
   return (
     <Box sx={{ maxWidth: 400 }}>
+      {/* Stepper component to display steps vertically */}
       <Stepper activeStep={activeStep} orientation="vertical">
+        {/* Map through each step and render its content */}
         {steps.map((step, index) => (
           <Step key={step.label} id={"step-" + index}>
             <StepLabel>
+              {/* Button for activating a specific step */}
               <Button variant="text" onClick={() => activate(index)}>
                 {step.label}
               </Button>
             </StepLabel>
             <StepContent>
+              {/* Description for the current step */}
               <Typography>{step.description}</Typography>
             </StepContent>
           </Step>

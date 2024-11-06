@@ -8,80 +8,130 @@ import Select from "@mui/material/Select";
 import data from "../Data.js";
 import CETEIHelper from "../CETEIHelper.js";
 
-export default function AlignTab({
-  id,
-  onLanguageChanged,
-  onSelectionChanged,
-  excludeLanguage,
-}) {
-  const [language, setLanguage] = React.useState("");
-  const contentRef = React.createRef();
+/**
+ * AlignTab component provides a user interface for selecting a language,
+ * displaying language-specific content, and enabling user interactions
+ * with TEI (Text Encoding Initiative) elements.
+ */
+class AlignTab extends React.Component {
+  constructor(props) {
+    super(props);
 
-  const handleChange = (event) => {
-    onLanguageChanged(event.target.value);
-    setLanguage(event.target.value);
+    // Initial state includes selected language and refresh tracking
+    this.state = { language: "", lastRefresh: 0 };
+    // Reference to content container for dynamic updates
+    this.contentRef = React.createRef();
+  }
 
-    contentRef.current.innerHTML = "";
-    contentRef.current.append(
-      CETEIHelper.CETEI.makeHTML5(
-        data.getDocumentPerLanguage(event.target.value),
-        null,
-        (domElm, teiElm) => alignLogic(id, contentRef.current, domElm, teiElm),
-      ),
-    );
-  };
+  render() {
+    /**
+     * Handles language selection changes in the dropdown.
+     * Updates the selected language in state and triggers content refresh.
+     * 
+     * @param {object} event - The change event from the Select component.
+     */
+    const handleChange = (event) => {
+      this.props.onLanguageChanged(event.target.value);
+      this.setState({ language: event.target.value });
+      refresh(event.target.value);
+    };
 
-  const alignLogic = (id, rootElm, domElm, teiElm) => {
-    domElm.addEventListener("click", (e) => {
-      onSelectionChanged(domElm, teiElm, rootElm);
-      e.stopPropagation();
-    });
+    /**
+     * Configures interactive logic for a TEI element.
+     * Sets click and hover events to change the appearance and behavior of TEI elements.
+     * 
+     * @param {string} id - The unique identifier for the element.
+     * @param {HTMLElement} rootElm - The root element of the content.
+     * @param {HTMLElement} domElm - The DOM element being configured.
+     * @param {HTMLElement} teiElm - The TEI element related to domElm.
+     */
+    const alignLogic = (id, rootElm, domElm, teiElm) => {
+      domElm.addEventListener("click", (e) => {
+        this.props.onSelectionChanged(domElm, teiElm, rootElm);
+        e.stopPropagation();
+      });
 
-    domElm.addEventListener("mouseover", (e) => {
-      if (!e.target.classList.contains("selectedTEI")) {
-        e.target.classList.add("selectableTEI");
-      }
-      e.stopPropagation();
-    });
-
-    domElm.addEventListener("mouseout", (e) => {
-      if (!e.target.classList.contains("selectedTEI")) {
-        e.target.classList.remove("selectableTEI");
-      }
-      e.stopPropagation();
-    });
-  };
-
-  return (
-    <Box>
-      <FormControl
-        fullWidth
-        disabled={
-          data
-            .getDocumentLanguages()
-            .filter((language) => language !== excludeLanguage).length === 0
+      domElm.addEventListener("mouseover", (e) => {
+        if (!e.target.classList.contains("selectedTEI")) {
+          e.target.classList.add("selectableTEI");
         }
-      >
-        <InputLabel id={id + "-label"}>Language</InputLabel>
-        <Select
-          labelId={id + "-label"}
-          id={id + "-select"}
-          value={language}
-          label="Language"
-          onChange={handleChange}
-        >
-          {data
-            .getDocumentLanguages()
-            .filter((language) => language !== excludeLanguage)
-            .map((language) => (
-              <MenuItem value={language} key={id + "-key-" + language}>
-                {language}
-              </MenuItem>
-            ))}
-        </Select>
-      </FormControl>
+        e.stopPropagation();
+      });
 
-      <div ref={contentRef} />
-    </Box>
-  );
+      domElm.addEventListener("mouseout", (e) => {
+        if (!e.target.classList.contains("selectedTEI")) {
+          e.target.classList.remove("selectableTEI");
+        }
+        e.stopPropagation();
+      });
+    };
+
+    /**
+     * Refreshes the content based on the selected language.
+     * Clears existing content and re-generates it using CETEIHelper, with 
+     * alignment logic applied to TEI elements.
+     * 
+     * @param {string} language - The language code to load content for.
+     */
+    const refresh = (language) => {
+      this.contentRef.current.innerHTML = "";
+      this.contentRef.current.append(
+        CETEIHelper.CETEI.makeHTML5(
+          data.getDocumentPerLanguage(language),
+          null,
+          (domElm, teiElm) =>
+            alignLogic(this.props.id, this.contentRef.current, domElm, teiElm),
+        ),
+      );
+    };
+
+    // Check if a refresh is needed based on props and state
+    if (
+      this.props.refreshNeeded != this.state.lastRefresh &&
+      this.contentRef.current
+    ) {
+      this.setState({ lastRefresh: this.props.refreshNeeded });
+      refresh(this.state.language);
+    }
+
+    return (
+      <Box>
+        <FormControl
+          fullWidth
+          disabled={
+            data
+              .getDocumentLanguages()
+              .filter((language) => language !== this.props.excludeLanguage)
+              .length === 0
+          }
+        >
+          <InputLabel id={this.props.id + "-label"}>Language</InputLabel>
+          <Select
+            labelId={this.props.id + "-label"}
+            id={this.props.id + "-select"}
+            value={this.state.language}
+            label="Language"
+            onChange={handleChange}
+          >
+            {data
+              .getDocumentLanguages()
+              .filter((language) => language !== this.props.excludeLanguage)
+              .map((language) => (
+                <MenuItem
+                  value={language}
+                  key={this.props.id + "-key-" + language}
+                >
+                  {language}
+                </MenuItem>
+              ))}
+          </Select>
+        </FormControl>
+
+        {/* Content container for dynamic TEI elements */}
+        <div ref={this.contentRef} />
+      </Box>
+    );
+  }
 }
+
+export default AlignTab;
