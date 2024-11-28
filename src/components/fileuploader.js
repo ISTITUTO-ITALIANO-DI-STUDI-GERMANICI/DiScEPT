@@ -1,23 +1,25 @@
 // Import necessary modules and components from React and Material-UI
 import * as React from "react";
-import Dialog from "@mui/material/Dialog";              // Dialog components for modal dialogs
+import Dialog from "@mui/material/Dialog"; // Dialog components for modal dialogs
 import DialogActions from "@mui/material/DialogActions"; // Container for dialog actions (buttons)
 import DialogContent from "@mui/material/DialogContent"; // Container for dialog content
 import DialogContentText from "@mui/material/DialogContentText"; // Content text with default styling
-import DialogTitle from "@mui/material/DialogTitle";     // Dialog title
-import Button from "@mui/material/Button";               // Button component
-import TextField from "@mui/material/TextField";         // TextField for user input
+import DialogTitle from "@mui/material/DialogTitle"; // Dialog title
+import Button from "@mui/material/Button"; // Button component
+import TextField from "@mui/material/TextField"; // TextField for user input
 
-import data from "../Data.js";                           // Custom data module for handling file data
+import data from "../Data.js"; // Custom data module for handling file data
 
 // DisceptFileUploader Component - Handles file upload with validation, error handling, and modal dialogs
 export default function DisceptFileUploader({ fileUploaded, onChange }) {
   // Local state for file handling, dialog visibility, and language input
   const [file, setFile] = React.useState(null);
   const [overwriteDialogShown, setOverwriteDialogShown] = React.useState(false);
-  const [genericErrorDialogShown, setGenericErrorDialogShown] = React.useState(false);
+  const [genericErrorDialogShown, setGenericErrorDialogShown] =
+    React.useState(false);
   const [noDisceptDialogShown, setNoDisceptDialogShown] = React.useState(false);
-  const [loadCompletedDialogShown, setLoadCompletedDialogShown] = React.useState(false);
+  const [loadCompletedDialogShown, setLoadCompletedDialogShown] =
+    React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState(""); // Stores user input for language name
 
   // Triggers when file loading completes successfully, showing a confirmation dialog
@@ -41,9 +43,9 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
     setFile(fileUploaded);
 
     if (data.isChanged) {
-      setOverwriteDialogShown(true);    // If there are unsaved changes, show overwrite confirmation dialog
+      setOverwriteDialogShown(true); // If there are unsaved changes, show overwrite confirmation dialog
     } else {
-      readFile(fileUploaded);           // Otherwise, proceed to read the new file
+      readFile(fileUploaded); // Otherwise, proceed to read the new file
     }
   }
 
@@ -61,10 +63,10 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
   // Handles different error cases when file reading fails
   function catchError(err) {
     switch (err.message) {
-      case "no-discept":                // Error indicating that the file isn't in the DiScEPT format
+      case "no-discept": // Error indicating that the file isn't in the DiScEPT format
         setNoDisceptDialogShown(true);
         break;
-      case "invalid":                   // Default error case for general file reading issues
+      case "invalid": // Default error case for general file reading issues
       default:
         setGenericErrorDialogShown(true);
         break;
@@ -121,7 +123,8 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="overwrite-dialog-desc">
-            Please confirm you want to upload this new file and overwrite the existing changes.
+            Please confirm you want to upload this new file and overwrite the
+            existing changes.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -162,7 +165,8 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
         <DialogTitle id="no-discept">{"Valid TEI, but..."}</DialogTitle>
         <DialogContent>
           <DialogContentText id="no-discept-desc">
-            The uploaded file does not appear to be a DiScEPT TEI model. Do you want to import it as a language instead?
+            The uploaded file does not appear to be a DiScEPT TEI model. Do you
+            want to import it as a language instead?
           </DialogContentText>
           <TextField
             autoFocus

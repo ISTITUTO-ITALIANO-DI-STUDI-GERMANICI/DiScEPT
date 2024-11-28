@@ -21,19 +21,15 @@ export default function DisceptStepper({ steps, onChange }) {
 
   return (
     <Box sx={{ maxWidth: 400 }}>
-      {/* Stepper component to display steps vertically */}
       <Stepper activeStep={activeStep} orientation="vertical">
-        {/* Map through each step and render its content */}
         {steps.map((step, index) => (
           <Step key={step.label} id={"step-" + index}>
             <StepLabel>
-              {/* Button for activating a specific step */}
               <Button variant="text" onClick={() => activate(index)}>
                 {step.label}
               </Button>
             </StepLabel>
             <StepContent>
-              {/* Description for the current step */}
               <Typography>{step.description}</Typography>
             </StepContent>
           </Step>

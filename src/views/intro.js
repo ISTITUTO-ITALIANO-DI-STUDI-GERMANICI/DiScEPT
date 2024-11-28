@@ -8,7 +8,7 @@ function IntroView() {
   return (
     <Box>
       <Typography variant="h3" gutterBottom>
-        DiSCePT
+        DiScEPT
       </Typography>
 
       <p>
@@ -40,7 +40,7 @@ function IntroView() {
       <p>
         Questa piattaforma, in primo luogo, permette la produzione di{" "}
         <Tooltip title="Pierazzo, Elena. Digital Scholarly Editing: Theories, Models and Methods. Farnham, Surrey: Ashgate, 2015">
-          <u>editizioni scientifiche digitali</u>
+          <u>edizioni scientifiche digitali</u>
         </Tooltip>
         , la codifica dei dati e la descrizione dei metadati attraverso formati
         diversi, come ad esempio XML-TEI, XML-RDF, JSON-LD, focalizzandosi in
@@ -124,16 +124,16 @@ function IntroView() {
 const IntroOnboarding = [
   {
     popover: {
-      title: "DiSCePT",
+      title: "DiScEPT",
       description:
-        "DiSCePT is a nice tool. But we need to write the documentation! TODO",
+        "DiScEPT is a nice tool. But we need to write the documentation! TODO",
     },
   },
   {
     element: "#discept-file-uploader",
     popover: {
       title: "Upload your TEI files",
-      description: "DiSCePT supports TEI as input and as output. TODO",
+      description: "DiScEPT supports TEI as input and as output. TODO",
     },
   },
   {

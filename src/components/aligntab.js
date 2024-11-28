@@ -27,7 +27,7 @@ class AlignTab extends React.Component {
     /**
      * Handles language selection changes in the dropdown.
      * Updates the selected language in state and triggers content refresh.
-     * 
+     *
      * @param {object} event - The change event from the Select component.
      */
     const handleChange = (event) => {
@@ -39,7 +39,7 @@ class AlignTab extends React.Component {
     /**
      * Configures interactive logic for a TEI element.
      * Sets click and hover events to change the appearance and behavior of TEI elements.
-     * 
+     *
      * @param {string} id - The unique identifier for the element.
      * @param {HTMLElement} rootElm - The root element of the content.
      * @param {HTMLElement} domElm - The DOM element being configured.
@@ -68,9 +68,9 @@ class AlignTab extends React.Component {
 
     /**
      * Refreshes the content based on the selected language.
-     * Clears existing content and re-generates it using CETEIHelper, with 
+     * Clears existing content and re-generates it using CETEIHelper, with
      * alignment logic applied to TEI elements.
-     * 
+     *
      * @param {string} language - The language code to load content for.
      */
     const refresh = (language) => {

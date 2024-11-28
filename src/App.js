@@ -1,7 +1,7 @@
 import * as React from "react"; // Import the React library
 import Grid from "@mui/material/Grid"; // Import Grid component from Material-UI
 import CssBaseline from "@mui/material/CssBaseline"; // Resets CSS across browsers
-import { ThemeProvider, createTheme } from '@mui/material/styles'; // For creating and applying themes
+import { ThemeProvider, createTheme } from "@mui/material/styles"; // For creating and applying themes
 
 // Custom components
 import DisceptAppBar from "./components/appbar.js";
@@ -17,7 +17,7 @@ import { EditorView, EditorOnboarding } from "./views/editor.js";
 import { AlignmentView, AlignmentOnboarding } from "./views/alignment.js";
 import { ImageView, ImageOnboarding } from "./views/image.js";
 import { FinalView, FinalOnboarding } from "./views/final.js";
-import { themeOptions } from "./Theme.js" // Import custom theme options
+import { themeOptions } from "./Theme.js"; // Import custom theme options
 
 // Define steps of the app, each with a view component and an optional onboarding process
 const steps = [
@@ -102,39 +102,31 @@ class App extends React.Component {
     };
 
     return (
-      // Apply the custom theme using ThemeProvider
       <ThemeProvider theme={theme}>
-        <CssBaseline /> {/* Normalize CSS across browsers */}
+        <CssBaseline />
 
-        {/* Top navigation bar with file upload functionality */}
         <DisceptAppBar fileUploaded={fileUploaded} onHelp={runOnboarding} />
 
-        {/* Grid layout for stepper and content area */}
         <Grid container spacing={2} sx={{ p: 3 }}>
           <Grid item xs={2}>
-            {/* Sidebar with stepper to navigate between steps */}
             <DisceptStepper steps={steps} onChange={changeStep} />
           </Grid>
           <Grid item xs={10}>
-            {/* Display the current step's content */}
             <Item step={this.state.currentStep} />
           </Grid>
         </Grid>
 
-        {/* Component for uploading files */}
         <DisceptFileUploader
           fileUploaded={this.state.fileUploaded}
-          onChange={() => changeStep(0)} // Reset to first step after file upload
+          onChange={() => changeStep(0)}
         />
 
-        {/* Onboarding component: shows guided instructions if onboarding is active */}
         <Onboarding
           run={this.state.runOnboarding}
-          onCompleted={onboardingCompleted} // Stop onboarding once completed
-          steps={steps[this.state.currentStep].onboarding} // Show the relevant onboarding steps
+          onCompleted={onboardingCompleted}
+          steps={steps[this.state.currentStep].onboarding}
         />
 
-        {/* Component that prevents closing the tab if there are unsaved changes */}
         <PreventClosing />
       </ThemeProvider>
     );

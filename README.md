@@ -1,4 +1,4 @@
-Certo! Ecco il file `README.md` in formato Markdown:
+# DiScEPT
 
 ```markdown
 # Discept UI
