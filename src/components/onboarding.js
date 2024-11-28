@@ -15,11 +15,12 @@ export default function Onboarding({ run, onCompleted, steps }) {
 
       // Configure the driver object for onboarding steps
       const driverObj = driver({
-        showProgress: true,       // Displays progress indicator for onboarding steps
-        steps,                    // Steps array detailing each step in the onboarding process
-        onDestroyStarted: () => { // Callback triggered when the onboarding sequence is ending
-          onCompleted();          // Calls 'onCompleted' callback (prop) when onboarding completes
-          driverObj.destroy();    // Cleans up driver instance to ensure no memory leaks or leftover instances
+        showProgress: true, // Displays progress indicator for onboarding steps
+        steps, // Steps array detailing each step in the onboarding process
+        onDestroyStarted: () => {
+          // Callback triggered when the onboarding sequence is ending
+          onCompleted(); // Calls 'onCompleted' callback (prop) when onboarding completes
+          driverObj.destroy(); // Cleans up driver instance to ensure no memory leaks or leftover instances
         },
       });
 

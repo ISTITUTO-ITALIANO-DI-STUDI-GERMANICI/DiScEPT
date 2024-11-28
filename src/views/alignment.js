@@ -2,6 +2,7 @@ import React from "react";
 
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
+import ButtonGroup from "@mui/material/ButtonGroup";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import List from "@mui/material/List";
@@ -12,8 +13,11 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 import AlignTab from "../components/aligntab.js";
+import AutomagicButton from "../components/automagicbutton.js";
 
 import data from "../Data.js";
+
+const TEI_NS = "http://www.tei-c.org/ns/1.0";
 
 class AlignmentView extends React.Component {
   constructor(props) {
@@ -21,8 +25,10 @@ class AlignmentView extends React.Component {
     this.state = {
       tabALanguage: "",
       tabASelections: [],
+      tabARefreshNeeded: 0,
       tabBLanguage: "",
       tabBSelections: [],
+      tabBRefreshNeeded: 0,
       listRefreshNeeded: 0,
     };
   }
@@ -30,6 +36,112 @@ class AlignmentView extends React.Component {
   render() {
     const tabAref = React.createRef();
     const tabBref = React.createRef();
+
+    const tokenizeLink = () => {
+      if (this.state.tabASelections) {
+        tokenize(true, this.state.tabALanguage, this.state.tabASelections);
+      } else {
+        tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
+      }
+    };
+
+    const tokenizeArray = (parts) => {
+      let whitespaces = [];
+      let current = "";
+      const values = [];
+
+      function bestOf(whitespaces) {
+        if (whitespaces.includes("\n")) return "\n";
+        return " ";
+      }
+
+      for (const part of parts) {
+        if (/\s/.test(part)) {
+          whitespaces.push(part);
+          continue;
+        }
+
+        if (current !== "") {
+          values.push(current + bestOf(whitespaces));
+        }
+
+        current = part;
+        whitespaces = [];
+      }
+
+      if (current !== "") {
+        values.push(current + bestOf(whitespaces));
+      }
+
+      return values;
+    };
+
+    const tokenizeInternal = (elm) => {
+      let changed = false;
+      for (const node of Array.from(elm.childNodes)) {
+        switch (node.nodeType) {
+          case Node.ELEMENT_NODE: {
+            if (tokenizeInternal(node)) {
+              changed = true;
+            }
+            break;
+          }
+
+          case Node.TEXT_NODE: {
+            const text = tokenizeArray(
+              node.textContent.trim().split(/(?=\s)|(?<=\s)/g),
+            );
+            if (text.length <= 1) break;
+
+            text.forEach((word) => {
+              const elm = node.ownerDocument.createElementNS(TEI_NS, "w");
+              elm.textContent = word;
+              node.parentElement.insertBefore(elm, node);
+
+              node.parentElement.insertBefore(
+                node.ownerDocument.createTextNode(" "),
+                node,
+              );
+            });
+
+            node.remove();
+            changed = true;
+            break;
+          }
+        }
+      }
+
+      return changed;
+    };
+
+    const tokenize = (isA, language, selections) => {
+      if (!selections.length) return;
+
+      let changed = false;
+
+      selections.forEach((selection) => {
+        if (tokenizeInternal(selection.teiElm)) {
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        data.updateDocumentPerLanguage(
+          language,
+          selections[0].teiElm.ownerDocument.firstElementChild.outerHTML,
+        );
+
+        if (isA) {
+          this.setState({
+            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+          });
+        } else {
+          this.setState({
+            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+          });
+        }
+      }
+    };
 
     const createLink = () => {
       const langAIds = [];
@@ -159,6 +271,7 @@ class AlignmentView extends React.Component {
                 updateSelection("tabA", domElm, teiElm, rootElm)
               }
               excludeLanguage={this.state.tabBLanguage}
+              refreshNeeded={this.state.tabARefreshNeeded}
             />
           </Grid>
           <Grid item xs={4.5}>
@@ -171,20 +284,42 @@ class AlignmentView extends React.Component {
                 updateSelection("tabB", domElm, teiElm, rootElm)
               }
               excludeLanguage={this.state.tabALanguage}
+              refreshNeeded={this.state.tabBRefreshNeeded}
             />
           </Grid>
           <Grid item xs={3}>
-            <Button
-              id="alignment-link"
-              variant="contained"
-              disabled={
-                !this.state.tabASelections.length ||
-                !this.state.tabBSelections.length
-              }
-              onClick={createLink}
-            >
-              Link selections
-            </Button>
+            <ButtonGroup aria-label="button group" orientation="vertical">
+              <Button
+                id="alignment-link"
+                variant="contained"
+                disabled={
+                  !this.state.tabASelections.length ||
+                  !this.state.tabBSelections.length
+                }
+                onClick={createLink}
+              >
+                Link selections
+              </Button>
+              <Button
+                id="tokenize-link"
+                variant="contained"
+                disabled={
+                  (!this.state.tabASelections.length &&
+                    !this.state.tabBSelections.length) ||
+                  (this.state.tabASelections.length &&
+                    this.state.tabBSelections.length)
+                }
+                onClick={tokenizeLink}
+              >
+                Tokenize selection
+              </Button>
+              <AutomagicButton
+                languageA={this.state.tabALanguage}
+                languageB={this.state.tabBLanguage}
+              >
+                AI alignment
+              </AutomagicButton>
+            </ButtonGroup>
             <List key={"list-" + this.state.listRefreshNeeded}>
               {data
                 .getAlignments(this.state.tabALanguage, this.state.tabBLanguage)

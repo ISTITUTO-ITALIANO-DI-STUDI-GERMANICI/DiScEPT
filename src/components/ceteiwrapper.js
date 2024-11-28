@@ -1,12 +1,12 @@
 // Import React and CETEIHelper, a custom helper for handling TEI XML transformations
 import * as React from "react";
-import CETEIHelper from "../CETEIHelper.js";  // Utility to convert TEI XML into HTML5
+import CETEIHelper from "../CETEIHelper.js"; // Utility to convert TEI XML into HTML5
 
 // CETEIWrapper Component - A React component that transforms and renders TEI XML content
 export default class CETEIWrapper extends React.Component {
   constructor(props) {
     super(props);
-    this.contentRef = React.createRef();  // Reference to the DOM element where transformed TEI will be rendered
+    this.contentRef = React.createRef(); // Reference to the DOM element where transformed TEI will be rendered
   }
 
   // Lifecycle method - Runs once after the component mounts
@@ -20,6 +20,6 @@ export default class CETEIWrapper extends React.Component {
 
   // Render method - Returns a div element that acts as a container for the transformed content
   render() {
-    return <div ref={this.contentRef} />;  // Ref is assigned to allow direct DOM manipulation
+    return <div ref={this.contentRef} />; // Ref is assigned to allow direct DOM manipulation
   }
 }
