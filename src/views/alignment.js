@@ -228,7 +228,7 @@ class AlignmentView extends React.Component {
       this.setState({ listRefreshNeeded: this.state.listRefreshNeeded + 1 });
     };
 
-    const showAligment = (index) => {
+    const showAlignment = (index) => {
       const a = data.getAlignments(
         this.state.tabALanguage,
         this.state.tabBLanguage,
@@ -241,17 +241,17 @@ class AlignmentView extends React.Component {
         obj.a
           .map((id) => document.getElementById(id))
           .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAligmentTEI"));
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
         obj.b
           .map((id) => document.getElementById(id))
           .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAligmentTEI"));
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
       });
     };
 
-    const hideAligment = (index) => {
-      Array.from(document.getElementsByClassName("previewAligmentTEI")).forEach(
-        (elm) => elm.classList.remove("previewAligmentTEI"),
+    const hideAlignment = (index) => {
+      Array.from(document.getElementsByClassName("previewAlignmentTEI")).forEach(
+        (elm) => elm.classList.remove("previewAlignmentTEI"),
       );
     };
 
@@ -352,8 +352,8 @@ class AlignmentView extends React.Component {
                     <ListItemButton>
                       <ListItemText
                         primary={"Alignment " + (index + 1)}
-                        onMouseOut={() => hideAligment(index)}
-                        onMouseOver={() => showAligment(index)}
+                        onMouseOut={() => hideAlignment(index)}
+                        onMouseOver={() => showAlignment(index)}
                       />
                     </ListItemButton>
                   </ListItem>
