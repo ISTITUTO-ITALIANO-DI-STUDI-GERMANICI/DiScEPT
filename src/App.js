@@ -67,6 +67,7 @@ class App extends React.Component {
       currentStep: 0,
       fileUploaded: null,
       runOnboarding: false,
+      stepperOpen: true,
     };
   }
 
@@ -92,6 +93,11 @@ class App extends React.Component {
       this.setState({ runOnboarding: true });
     };
 
+    // Function to toggle the visibility of the stepper
+    const toggleStepper = () => {
+      this.setState((state) => ({ stepperOpen: !state.stepperOpen }));
+    };
+
     // Function to stop the onboarding process once it's completed
     const onboardingCompleted = () => {
       this.setState({ runOnboarding: false });
@@ -101,13 +107,30 @@ class App extends React.Component {
       <ThemeProvider theme={theme}>
         <CssBaseline />
 
-        <DisceptAppBar fileUploaded={fileUploaded} onHelp={runOnboarding} />
+        <DisceptAppBar
+          fileUploaded={fileUploaded}
+          onHelp={runOnboarding}
+          onToggleStepper={toggleStepper}
+          stepperOpen={this.state.stepperOpen}
+        />
 
-        <Grid container spacing={2} sx={{ p: 3 }}>
-          <Grid item xs={2}>
-            <DisceptStepper steps={steps} onChange={changeStep} />
+        <Grid container spacing={2} sx={{ p: 3, position: "relative" }}>
+          <Grid
+            item
+            sx={{
+              width: this.state.stepperOpen ? 240 : 16,
+              transition: "width 0.2s ease",
+              mr: 3,
+            }}
+          >
+            <DisceptStepper
+              steps={steps}
+              onChange={changeStep}
+              onToggle={toggleStepper}
+              open={this.state.stepperOpen}
+            />
           </Grid>
-          <Grid item xs={10}>
+          <Grid item xs>
             <Item step={this.state.currentStep} />
           </Grid>
         </Grid>

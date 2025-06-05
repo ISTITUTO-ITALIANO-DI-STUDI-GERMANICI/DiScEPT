@@ -12,6 +12,8 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"; // Icon representing file upload
 import HelpIcon from "@mui/icons-material/Help"; // Help icon, typically for an assistance or info button
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 // Hidden input styled component for file upload input, visually hidden but still accessible for screen readers
 const VisuallyHiddenInput = styled("input")({
@@ -27,7 +29,14 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 // DisceptAppBar Component - A custom AppBar component with logo, file upload, and help button
-export default function DisceptAppBar({ fileUploaded, onHelp, darkMode, toggleDarkMode }) {
+export default function DisceptAppBar({
+  fileUploaded,
+  onHelp,
+  darkMode,
+  toggleDarkMode,
+  onToggleStepper,
+  stepperOpen,
+}) {
   // Handles file upload event
   // Checks that only one file is selected, then triggers the fileUploaded callback with the selected file
   const fileUpload = (e) => {
@@ -60,6 +69,15 @@ export default function DisceptAppBar({ fileUploaded, onHelp, darkMode, toggleDa
           </Box>
 
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+
+            {/* Toggle stepper */}
+            {onToggleStepper && (
+              <Tooltip title={stepperOpen ? "Nascondi menu" : "Mostra menu"}>
+                <IconButton color="inherit" onClick={onToggleStepper}>
+                  {stepperOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+                </IconButton>
+              </Tooltip>
+            )}
 
             {/* Upload */}
             <Tooltip title="Upload file">
