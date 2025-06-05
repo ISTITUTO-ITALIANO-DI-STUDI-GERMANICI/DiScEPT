@@ -1,11 +1,16 @@
 // Import necessary modules from React and Material-UI
 import * as React from "react";
 import { styled } from "@mui/material/styles"; // Allows custom styling for Material-UI components
-import AppBar from "@mui/material/AppBar"; // Material-UI AppBar component, used to create the top navigation bar
-import Box from "@mui/material/Box"; // Box component for layout structure
-import Toolbar from "@mui/material/Toolbar"; // Toolbar component, aligns content within the AppBar
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  Box,
+  Tooltip,
+  Switch,
+} from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload"; // Icon representing file upload
-import IconButton from "@mui/material/IconButton"; // IconButton component for interactive icons
 import HelpIcon from "@mui/icons-material/Help"; // Help icon, typically for an assistance or info button
 
 // Hidden input styled component for file upload input, visually hidden but still accessible for screen readers
@@ -22,52 +27,61 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 // DisceptAppBar Component - A custom AppBar component with logo, file upload, and help button
-export default function DisceptAppBar({ fileUploaded, onHelp }) {
+export default function DisceptAppBar({ fileUploaded, onHelp, darkMode, toggleDarkMode }) {
   // Handles file upload event
   // Checks that only one file is selected, then triggers the fileUploaded callback with the selected file
   const fileUpload = (e) => {
-    if (e.target.files.length !== 1) {
-      return; // If no files or multiple files selected, do nothing
-    }
+    if (e.target.files.length !== 1) return;
     fileUploaded(e.target.files[0]); // Passes the selected file to the fileUploaded callback
   };
 
   return (
-    <AppBar position="static">
-      <Toolbar>
-        <Box
-          component="img"
-          sx={{ height: 50 }}
-          alt="DiScEPT"
-          src="assets/logo.png"
-        />
+    <Box sx={{ mb: 3, px: 2 }}>
+      <AppBar
+        position="static"
+        elevation={1}
+        sx={{
+          backgroundColor: "#FFFFFF",
+          color: "#2E2E2E",
+          borderRadius: "0 0 12px 12px",
+          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.06)",
+        }}
+      >
+        <Toolbar sx={{ justifyContent: "space-between", px: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <img
+              src="assets/logo.png"
+              alt="Logo"
+              style={{ height: 32 }}
+            />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              DiScEPT
+            </Typography>
+          </Box>
 
-        <Box sx={{ flexGrow: 1 }} />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-        <Box sx={{ display: { xs: "none", md: "flex" } }}>
-          <IconButton
-            id="discept-file-uploader"
-            component="label"
-            size="large"
-            aria-label="upload file"
-            color="inherit"
-          >
-            <CloudUploadIcon />
-            <VisuallyHiddenInput type="file" onChange={fileUpload} />
-          </IconButton>
+            {/* Upload */}
+            <Tooltip title="Upload file">
+              <IconButton component="label" color="inherit">
+                <CloudUploadIcon />
+                <VisuallyHiddenInput
+                  type="file"
+                  accept=".xml"
+                  onChange={fileUpload}
+                />
+              </IconButton>
+            </Tooltip>
 
-          <IconButton
-            id="help"
-            component="label"
-            size="large"
-            aria-label="help"
-            color="inherit"
-            onClick={onHelp}
-          >
-            <HelpIcon />
-          </IconButton>
-        </Box>
-      </Toolbar>
-    </AppBar>
+            {/* Help */}
+            <Tooltip title="Aiuto">
+              <IconButton color="inherit" onClick={onHelp}>
+                <HelpIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Toolbar>
+      </AppBar>
+    </Box>
   );
 }
