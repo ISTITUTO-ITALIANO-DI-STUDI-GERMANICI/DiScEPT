@@ -36,6 +36,7 @@ export default function DisceptAppBar({
   toggleDarkMode,
   onToggleStepper,
   stepperOpen,
+  onIntro,
 }) {
   // Handles file upload event
   // Checks that only one file is selected, then triggers the fileUploaded callback with the selected file
@@ -57,7 +58,10 @@ export default function DisceptAppBar({
         }}
       >
         <Toolbar sx={{ justifyContent: "space-between", px: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 1, cursor: "pointer" }}
+            onClick={() => onIntro && onIntro()}
+          >
             <img
               src="assets/logo.png"
               alt="Logo"

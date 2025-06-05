@@ -103,6 +103,11 @@ class App extends React.Component {
       this.setState({ runOnboarding: false });
     };
 
+    // Function to navigate back to the intro step
+    const goToIntro = () => {
+      changeStep(0);
+    };
+
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -112,6 +117,7 @@ class App extends React.Component {
           onHelp={runOnboarding}
           onToggleStepper={toggleStepper}
           stepperOpen={this.state.stepperOpen}
+          onIntro={goToIntro}
         />
 
         <Grid container spacing={2} sx={{ p: 3, position: "relative" }}>
