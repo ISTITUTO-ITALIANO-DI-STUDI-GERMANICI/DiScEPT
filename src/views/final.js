@@ -15,7 +15,7 @@ function FinalView() {
     let a = document.createElement("a");
     a.href = url;
     a.download = "file.tei";
-    a.display = "none";
+    a.style.display = "none";
 
     document.body.append(a);
 

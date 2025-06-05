@@ -38,7 +38,7 @@ class AlignmentView extends React.Component {
     const tabBref = React.createRef();
 
     const tokenizeLink = () => {
-      if (this.state.tabASelections) {
+      if (this.state.tabASelections.length) {
         tokenize(true, this.state.tabALanguage, this.state.tabASelections);
       } else {
         tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);

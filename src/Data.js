@@ -56,7 +56,7 @@ const helpers = [
   {
     setter: (dom, data) => {
       if (data.project.pubStatement) {
-        TEIPubStatement().iterateNext().textContent = data.project.pubStatement;
+        TEIPubStatement(dom).iterateNext().textContent = data.project.pubStatement;
       }
     },
     getter: (dom, data) => {
@@ -583,7 +583,7 @@ class Data {
       return;
     }
 
-    this.#changed = false;
+    this.#changed = true;
 
     if (!a.swap) {
       a.alignments.push({
