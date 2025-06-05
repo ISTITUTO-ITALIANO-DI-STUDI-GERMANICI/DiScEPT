@@ -105,13 +105,13 @@ class ImageView extends React.Component {
         obj.ids
           .map((id) => document.getElementById(id))
           .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAligmentTEI"));
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
       });
     };
 
     const hideImage = (index) => {
-      Array.from(document.getElementsByClassName("previewAligmentTEI")).forEach(
-        (elm) => elm.classList.remove("previewAligmentTEI"),
+      Array.from(document.getElementsByClassName("previewAlignmentTEI")).forEach(
+        (elm) => elm.classList.remove("previewAlignmentTEI"),
       );
     };
 
