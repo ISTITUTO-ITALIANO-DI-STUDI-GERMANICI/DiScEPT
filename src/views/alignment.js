@@ -379,7 +379,7 @@ class AlignmentView extends React.Component {
                   >
                     <ListItemButton>
                       <ListItemText
-                        primary={"Alignment " + (index + 1)}
+                        primary={`Alignment ${index + 1} (${alignment.category})`}
                         onMouseOut={() => hideAlignment(index)}
                         onMouseOver={() => showAlignment(index)}
                       />
