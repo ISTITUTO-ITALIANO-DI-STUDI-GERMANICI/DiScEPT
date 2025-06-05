@@ -8,6 +8,7 @@ import DisceptStepper from "./components/stepper.js";
 import DisceptFileUploader from "./components/fileuploader.js";
 import Onboarding from "./components/onboarding.js";
 import PreventClosing from "./components/preventclosing.js";
+import Footer from "./components/footer.js";
 
 // Views and their onboarding components
 import { IntroView, IntroOnboarding } from "./views/intro.js";
@@ -146,6 +147,7 @@ class App extends React.Component {
           steps={steps[this.state.currentStep].onboarding}
         />
 
+        <Footer />
         <PreventClosing />
       </ThemeProvider>
     );
