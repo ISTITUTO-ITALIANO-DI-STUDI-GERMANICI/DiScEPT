@@ -442,6 +442,9 @@ const helpers = [
               align.a.map((id) => "#" + id).join(" "),
             );
             joinA.setAttribute("xml:id", joinIdA);
+            if (align.category) {
+              joinA.setAttribute("type", align.category);
+            }
             standOff.appendChild(joinA);
           }
 
@@ -454,6 +457,9 @@ const helpers = [
               align.b.map((id) => "#" + id).join(" "),
             );
             joinB.setAttribute("xml:id", joinIdB);
+            if (align.category) {
+              joinB.setAttribute("type", align.category);
+            }
             standOff.appendChild(joinB);
           }
 
