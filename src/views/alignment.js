@@ -2,8 +2,11 @@ import React from "react";
 
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
-import ButtonGroup from "@mui/material/ButtonGroup";
 import Box from "@mui/material/Box";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -13,9 +16,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 import AlignTab from "../components/aligntab.js";
 import AutomagicButton from "../components/automagicbutton.js";
-import Title from '../components/title.js';
+import Title from "../components/title.js";
 
-import data from "../Data.js";
+import data, { ALIGNMENT_CATEGORIES } from "../Data.js";
 
 const TEI_NS = "http://www.tei-c.org/ns/1.0";
 
@@ -30,6 +33,7 @@ class AlignmentView extends React.Component {
       tabBSelections: [],
       tabBRefreshNeeded: 0,
       listRefreshNeeded: 0,
+      category: ALIGNMENT_CATEGORIES[0],
     };
   }
 
@@ -38,7 +42,7 @@ class AlignmentView extends React.Component {
     const tabBref = React.createRef();
 
     const tokenizeLink = () => {
-      if (this.state.tabASelections) {
+      if (this.state.tabASelections.length) {
         tokenize(true, this.state.tabALanguage, this.state.tabASelections);
       } else {
         tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
@@ -137,7 +141,7 @@ class AlignmentView extends React.Component {
           });
         } else {
           this.setState({
-            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+            tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1,
           });
         }
       }
@@ -180,6 +184,7 @@ class AlignmentView extends React.Component {
         this.state.tabBLanguage,
         langAIds,
         langBIds,
+        this.state.category,
       );
 
       for (const tab of [
@@ -228,7 +233,7 @@ class AlignmentView extends React.Component {
       this.setState({ listRefreshNeeded: this.state.listRefreshNeeded + 1 });
     };
 
-    const showAligment = (index) => {
+    const showAlignment = (index) => {
       const a = data.getAlignments(
         this.state.tabALanguage,
         this.state.tabBLanguage,
@@ -241,84 +246,120 @@ class AlignmentView extends React.Component {
         obj.a
           .map((id) => document.getElementById(id))
           .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAligmentTEI"));
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
         obj.b
           .map((id) => document.getElementById(id))
           .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAligmentTEI"));
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
       });
     };
 
-    const hideAligment = (index) => {
-      Array.from(document.getElementsByClassName("previewAligmentTEI")).forEach(
-        (elm) => elm.classList.remove("previewAligmentTEI"),
-      );
+    const hideAlignment = (index) => {
+      Array.from(
+        document.getElementsByClassName("previewAlignmentTEI"),
+      ).forEach((elm) => elm.classList.remove("previewAlignmentTEI"));
     };
+
+    const linkDisabled =
+      !this.state.tabASelections.length || !this.state.tabBSelections.length;
 
     return (
       <Box>
         <Title title="Align the translations" />
 
         <Grid container spacing={2}>
-          <Grid item xs={4.5}>
-            <AlignTab
-              id="tabA"
-              onLanguageChanged={(language) =>
-                languageChanged("tabA", language)
-              }
-              onSelectionChanged={(domElm, teiElm, rootElm) =>
-                updateSelection("tabA", domElm, teiElm, rootElm)
-              }
-              excludeLanguage={this.state.tabBLanguage}
-              refreshNeeded={this.state.tabARefreshNeeded}
-            />
-          </Grid>
-          <Grid item xs={4.5}>
-            <AlignTab
-              id="tabB"
-              onLanguageChanged={(language) =>
-                languageChanged("tabB", language)
-              }
-              onSelectionChanged={(domElm, teiElm, rootElm) =>
-                updateSelection("tabB", domElm, teiElm, rootElm)
-              }
-              excludeLanguage={this.state.tabALanguage}
-              refreshNeeded={this.state.tabBRefreshNeeded}
-            />
+          <Grid item xs={9}>
+            <Box
+              sx={{
+                bgcolor: "background.paper",
+                p: 2,
+                borderRadius: 8,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+              }}
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <AlignTab
+                    id="tabA"
+                    onLanguageChanged={(language) =>
+                      languageChanged("tabA", language)
+                    }
+                    onSelectionChanged={(domElm, teiElm, rootElm) =>
+                      updateSelection("tabA", domElm, teiElm, rootElm)
+                    }
+                    excludeLanguage={this.state.tabBLanguage}
+                    refreshNeeded={this.state.tabARefreshNeeded}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <AlignTab
+                    id="tabB"
+                    onLanguageChanged={(language) =>
+                      languageChanged("tabB", language)
+                    }
+                    onSelectionChanged={(domElm, teiElm, rootElm) =>
+                      updateSelection("tabB", domElm, teiElm, rootElm)
+                    }
+                    excludeLanguage={this.state.tabALanguage}
+                    refreshNeeded={this.state.tabBRefreshNeeded}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
           </Grid>
           <Grid item xs={3}>
-            <ButtonGroup aria-label="button group" orientation="vertical">
-              <Button
-                id="alignment-link"
-                variant="contained"
-                disabled={
-                  !this.state.tabASelections.length ||
-                  !this.state.tabBSelections.length
-                }
-                onClick={createLink}
-              >
-                Link selections
-              </Button>
-              <Button
-                id="tokenize-link"
-                variant="contained"
-                disabled={
-                  (!this.state.tabASelections.length &&
-                    !this.state.tabBSelections.length) ||
-                  (this.state.tabASelections.length &&
-                    this.state.tabBSelections.length)
-                }
-                onClick={tokenizeLink}
-              >
-                Tokenize selection
-              </Button>
-              <AutomagicButton
-                languageA={this.state.tabALanguage}
-                languageB={this.state.tabBLanguage}
-              >
-                AI alignment
-              </AutomagicButton>
-            </ButtonGroup>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Button
+                  id="tokenize-link"
+                  variant="contained"
+                  disabled={
+                    (!this.state.tabASelections.length &&
+                      !this.state.tabBSelections.length) ||
+                    (this.state.tabASelections.length &&
+                      this.state.tabBSelections.length)
+                  }
+                  onClick={tokenizeLink}
+                >
+                  Tokenize selection
+                </Button>
+                <AutomagicButton
+                  languageA={this.state.tabALanguage}
+                  languageB={this.state.tabBLanguage}
+                >
+                  AI alignment
+                </AutomagicButton>
+              </Box>
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Button
+                  id="alignment-link"
+                  variant="contained"
+                  disabled={linkDisabled}
+                  onClick={createLink}
+                >
+                  Link selections
+                </Button>
+                <FormControl disabled={linkDisabled} fullWidth>
+                  <InputLabel id="category-select-label">Category</InputLabel>
+                  <Select
+                    labelId="category-select-label"
+                    id="category-select"
+                    value={this.state.category}
+                    label="Category"
+                    onChange={(e) =>
+                      this.setState({ category: e.target.value })
+                    }
+                  >
+                    {ALIGNMENT_CATEGORIES.map((cat) => (
+                      <MenuItem value={cat} key={"cat-" + cat}>
+                        {cat}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
             <List key={"list-" + this.state.listRefreshNeeded}>
               {data
                 .getAlignments(this.state.tabALanguage, this.state.tabBLanguage)
@@ -338,9 +379,9 @@ class AlignmentView extends React.Component {
                   >
                     <ListItemButton>
                       <ListItemText
-                        primary={"Alignment " + (index + 1)}
-                        onMouseOut={() => hideAligment(index)}
-                        onMouseOver={() => showAligment(index)}
+                        primary={`Alignment ${index + 1} (${alignment.category})`}
+                        onMouseOut={() => hideAlignment(index)}
+                        onMouseOver={() => showAlignment(index)}
                       />
                     </ListItemButton>
                   </ListItem>

@@ -1,6 +1,5 @@
 # DiScEPT
 
-```markdown
 # Discept UI
 
 **Discept UI** is a React-based frontend application designed to work with TEI (Text Encoding Initiative) files, providing features for displaying and editing these files, as well as future integration with IIIF image sources.
@@ -39,5 +38,3 @@ npm start
 ```
 
 This will start the development server, and you can open the application in your browser at [http://localhost:3000](http://localhost:3000).
-```
-

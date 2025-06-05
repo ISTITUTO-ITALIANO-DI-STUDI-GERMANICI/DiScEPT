@@ -27,6 +27,15 @@ const TEIStandOffStatement = (dom) =>
     null,
   );
 
+// Fixed list of categories for alignment links
+// The categories are: Linguistic, Semantic, Literal, Other
+export const ALIGNMENT_CATEGORIES = [
+  "Linguistic",
+  "Semantic",
+  "Literal",
+  "Other",
+];
+
 const helpers = [
   // Template
   {
@@ -56,7 +65,7 @@ const helpers = [
   {
     setter: (dom, data) => {
       if (data.project.pubStatement) {
-        TEIPubStatement().iterateNext().textContent = data.project.pubStatement;
+        TEIPubStatement(dom).iterateNext().textContent = data.project.pubStatement;
       }
     },
     getter: (dom, data) => {
@@ -364,6 +373,7 @@ const helpers = [
               const obj = {
                 a: targets[0] in joinList ? joinList[targets[0]] : [targets[0]],
                 b: targets[1] in joinList ? joinList[targets[1]] : [targets[1]],
+                category: link.getAttribute("type") || ALIGNMENT_CATEGORIES[0],
               };
               aligns.push(obj);
 
@@ -432,6 +442,9 @@ const helpers = [
               align.a.map((id) => "#" + id).join(" "),
             );
             joinA.setAttribute("xml:id", joinIdA);
+            if (align.category) {
+              joinA.setAttribute("type", align.category);
+            }
             standOff.appendChild(joinA);
           }
 
@@ -444,11 +457,17 @@ const helpers = [
               align.b.map((id) => "#" + id).join(" "),
             );
             joinB.setAttribute("xml:id", joinIdB);
+            if (align.category) {
+              joinB.setAttribute("type", align.category);
+            }
             standOff.appendChild(joinB);
           }
 
           const link = dom.createElementNS(TEI_NS, "link");
           link.setAttribute("target", `#${joinIdA} #${joinIdB}`);
+          if (align.category) {
+            link.setAttribute("type", align.category);
+          }
           linkGrp.appendChild(link);
         }
 
@@ -554,6 +573,7 @@ class Data {
     return a.alignments.map((obj) => ({
       a: obj.b,
       b: obj.a,
+      category: obj.category,
     }));
   }
 
@@ -567,7 +587,7 @@ class Data {
     this.#changed = true;
   }
 
-  addAlignment(langA, langB, idsA, idsB) {
+  addAlignment(langA, langB, idsA, idsB, category = ALIGNMENT_CATEGORIES[0]) {
     const a = this.#getAlignments(langA, langB);
     if (!a) {
       this.#alignments.push({
@@ -577,18 +597,20 @@ class Data {
           {
             a: idsA,
             b: idsB,
+            category,
           },
         ],
       });
       return;
     }
 
-    this.#changed = false;
+    this.#changed = true;
 
     if (!a.swap) {
       a.alignments.push({
         a: idsA,
         b: idsB,
+        category,
       });
       return;
     }
@@ -596,6 +618,7 @@ class Data {
     a.alignments.push({
       a: idsB,
       b: idsA,
+      category,
     });
   }
 
