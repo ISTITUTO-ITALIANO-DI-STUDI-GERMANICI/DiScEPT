@@ -13,7 +13,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 import AlignTab from "../components/aligntab.js";
 import AutomagicButton from "../components/automagicbutton.js";
-import Title from '../components/title.js';
+import Title from "../components/title.js";
 
 import data from "../Data.js";
 
@@ -260,31 +260,44 @@ class AlignmentView extends React.Component {
         <Title title="Align the translations" />
 
         <Grid container spacing={2}>
-          <Grid item xs={4.5}>
-            <AlignTab
-              id="tabA"
-              onLanguageChanged={(language) =>
-                languageChanged("tabA", language)
-              }
-              onSelectionChanged={(domElm, teiElm, rootElm) =>
-                updateSelection("tabA", domElm, teiElm, rootElm)
-              }
-              excludeLanguage={this.state.tabBLanguage}
-              refreshNeeded={this.state.tabARefreshNeeded}
-            />
-          </Grid>
-          <Grid item xs={4.5}>
-            <AlignTab
-              id="tabB"
-              onLanguageChanged={(language) =>
-                languageChanged("tabB", language)
-              }
-              onSelectionChanged={(domElm, teiElm, rootElm) =>
-                updateSelection("tabB", domElm, teiElm, rootElm)
-              }
-              excludeLanguage={this.state.tabALanguage}
-              refreshNeeded={this.state.tabBRefreshNeeded}
-            />
+          <Grid item xs={9}>
+            <Box
+              sx={{
+                bgcolor: "background.paper",
+                p: 2,
+                borderRadius: 8,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+              }}
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <AlignTab
+                    id="tabA"
+                    onLanguageChanged={(language) =>
+                      languageChanged("tabA", language)
+                    }
+                    onSelectionChanged={(domElm, teiElm, rootElm) =>
+                      updateSelection("tabA", domElm, teiElm, rootElm)
+                    }
+                    excludeLanguage={this.state.tabBLanguage}
+                    refreshNeeded={this.state.tabARefreshNeeded}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <AlignTab
+                    id="tabB"
+                    onLanguageChanged={(language) =>
+                      languageChanged("tabB", language)
+                    }
+                    onSelectionChanged={(domElm, teiElm, rootElm) =>
+                      updateSelection("tabB", domElm, teiElm, rootElm)
+                    }
+                    excludeLanguage={this.state.tabALanguage}
+                    refreshNeeded={this.state.tabBRefreshNeeded}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
           </Grid>
           <Grid item xs={3}>
             <ButtonGroup aria-label="button group" orientation="vertical">
