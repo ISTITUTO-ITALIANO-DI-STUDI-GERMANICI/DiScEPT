@@ -6,7 +6,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
+    "test": "react-scripts test --env=jsdom --watchAll=false",
     "eject": "react-scripts eject"
   },
   "dependencies": {
@@ -35,5 +35,11 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "*",
     "prettier": "3.2.5"
+  },
+  "jest": {
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/tests"
+    ]
   }
 }
