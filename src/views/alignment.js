@@ -137,7 +137,7 @@ class AlignmentView extends React.Component {
           });
         } else {
           this.setState({
-            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+            tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1,
           });
         }
       }
