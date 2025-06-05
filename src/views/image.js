@@ -3,7 +3,6 @@ import React from "react";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -18,6 +17,7 @@ import InputLabel from "@mui/material/InputLabel";
 
 import AlignTab from "../components/aligntab.js";
 import OpenSeaDragon from "../components/openseadragon.js";
+import Title from '../components/title.js';
 
 import data from "../Data.js";
 
@@ -128,9 +128,7 @@ class ImageView extends React.Component {
 
     return (
       <Box>
-        <Typography variant="h3" gutterBottom>
-          Manage images
-        </Typography>
+        <Title title="Manage images" />
         <Grid container spacing={2}>
           <Grid item xs={9}>
             <AlignTab

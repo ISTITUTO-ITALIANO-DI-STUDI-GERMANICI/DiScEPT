@@ -2,8 +2,8 @@ import * as React from "react";
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
 
+import Title from '../components/title.js';
 import data from "../Data.js";
 
 function FinalView() {
@@ -32,9 +32,7 @@ function FinalView() {
 
   return (
     <Box>
-      <Typography variant="h3" gutterBottom>
-        Finalize your digital edition
-      </Typography>
+      <Title title="Finalize your digital edition" />
 
       <p>
         You can download the file in TEI/XML or also in RDF/XML. Both formats

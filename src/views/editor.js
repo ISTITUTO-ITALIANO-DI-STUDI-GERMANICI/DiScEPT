@@ -17,9 +17,9 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 
 import EditorTab from "../components/editortab.js";
+import Title from '../components/title.js';
 import data from "../Data.js";
 
 const documentTemplate = (
@@ -97,9 +97,7 @@ function EditorView() {
   return (
     <Grid container spacing={3}>
       <Grid item xs={9}>
-        <Typography variant="h3" gutterBottom>
-          Edit the content
-        </Typography>
+        <Title title="Edit the content" />
         {data.getDocumentLanguages().map((language) => (
           <EditorTab
             key={"editortab-" + language}

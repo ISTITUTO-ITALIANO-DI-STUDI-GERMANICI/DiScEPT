@@ -3,8 +3,8 @@ import * as React from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 
+import Title from '../components/title.js';
 import data from "../Data.js";
 
 const fields = [
@@ -48,9 +48,7 @@ function ProjectView() {
 
   return (
     <Box component="form" noValidate>
-      <Typography variant="h3" gutterBottom>
-        Project base properties
-      </Typography>
+      <Title title="Project base properties" />
 
       <Box id="project-fields">
         {fields.map((field, index) => (

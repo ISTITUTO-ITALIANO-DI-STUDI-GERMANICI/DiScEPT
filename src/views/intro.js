@@ -1,15 +1,14 @@
 import * as React from "react";
 
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
+
+import Title from '../components/title.js';
 
 function IntroView() {
   return (
     <Box>
-      <Typography variant="h3" gutterBottom>
-        DiScEPT
-      </Typography>
+      <Title title="DiScEPT" />
 
       <p>
         La piattaforma per edizioni scientifiche digitali DiScEPT nasce con

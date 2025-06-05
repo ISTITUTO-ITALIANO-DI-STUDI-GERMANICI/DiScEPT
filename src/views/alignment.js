@@ -4,7 +4,6 @@ import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
@@ -14,6 +13,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 import AlignTab from "../components/aligntab.js";
 import AutomagicButton from "../components/automagicbutton.js";
+import Title from '../components/title.js';
 
 import data from "../Data.js";
 
@@ -257,9 +257,8 @@ class AlignmentView extends React.Component {
 
     return (
       <Box>
-        <Typography variant="h3" gutterBottom>
-          Align the translations
-        </Typography>
+        <Title title="Align the translations" />
+
         <Grid container spacing={2}>
           <Grid item xs={4.5}>
             <AlignTab

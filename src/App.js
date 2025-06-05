@@ -1,7 +1,6 @@
 import * as React from "react"; // Import the React library
 import Grid from "@mui/material/Grid"; // Import Grid component from Material-UI
-import CssBaseline from "@mui/material/CssBaseline"; // Resets CSS across browsers
-import { ThemeProvider, createTheme } from "@mui/material/styles"; // For creating and applying themes
+import { ThemeProvider, CssBaseline } from '@mui/material';
 
 // Custom components
 import DisceptAppBar from "./components/appbar.js";
@@ -17,7 +16,7 @@ import { EditorView, EditorOnboarding } from "./views/editor.js";
 import { AlignmentView, AlignmentOnboarding } from "./views/alignment.js";
 import { ImageView, ImageOnboarding } from "./views/image.js";
 import { FinalView, FinalOnboarding } from "./views/final.js";
-import { themeOptions } from "./Theme.js"; // Import custom theme options
+import theme from './Theme.js';
 
 // Define steps of the app, each with a view component and an optional onboarding process
 const steps = [
@@ -59,9 +58,6 @@ const steps = [
     onboarding: FinalOnboarding,
   },
 ];
-
-// Create a custom theme using the defined theme options
-const theme = createTheme(themeOptions);
 
 class App extends React.Component {
   constructor(props) {
