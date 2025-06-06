@@ -127,13 +127,20 @@ class AlignmentView extends React.Component {
           selections[0].teiElm.ownerDocument.firstElementChild.outerHTML,
         );
 
+        selections.forEach((a) => {
+          a.domElm.classList.remove("selectedTEI");
+          a.domElm.classList.remove("selectableTEI");
+        });
+
         if (isA) {
           this.setState({
             tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+            tabASelections: [],
           });
         } else {
           this.setState({
             tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1,
+            tabBSelections: [],
           });
         }
       }
