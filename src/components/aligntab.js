@@ -141,6 +141,13 @@ class AlignTab extends React.Component {
           <Button
             size="small"
             variant="outlined"
+            onClick={this.props.onTokenizeAll}
+          >
+            Tokenize all
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
             onClick={this.props.onSelectAll}
           >
             Select all
