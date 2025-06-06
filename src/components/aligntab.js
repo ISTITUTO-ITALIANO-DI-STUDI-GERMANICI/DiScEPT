@@ -53,16 +53,16 @@ class AlignTab extends React.Component {
         e.stopPropagation();
       });
 
-      domElm.addEventListener("mouseover", (e) => {
-        if (!e.target.classList.contains("selectedTEI")) {
-          e.target.classList.add("selectableTEI");
+      domElm.addEventListener("mouseenter", (e) => {
+        if (!domElm.classList.contains("selectedTEI")) {
+          domElm.classList.add("selectableTEI");
         }
         e.stopPropagation();
       });
 
-      domElm.addEventListener("mouseout", (e) => {
-        if (!e.target.classList.contains("selectedTEI")) {
-          e.target.classList.remove("selectableTEI");
+      domElm.addEventListener("mouseleave", (e) => {
+        if (!domElm.classList.contains("selectedTEI")) {
+          domElm.classList.remove("selectableTEI");
         }
         e.stopPropagation();
       });
