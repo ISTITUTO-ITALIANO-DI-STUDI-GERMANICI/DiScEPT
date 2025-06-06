@@ -154,6 +154,30 @@ class AlignmentView extends React.Component {
       }
     };
 
+    const tokenizeAll = (id) => {
+      const language = id === "tabA" ? this.state.tabALanguage : this.state.tabBLanguage;
+      if (!language) return;
+      const parser = new DOMParser();
+      const dom = parser.parseFromString(
+        data.getDocumentPerLanguage(language),
+        "text/xml",
+      );
+      if (tokenizeInternal(dom.firstElementChild)) {
+        data.updateDocumentPerLanguage(language, dom.firstElementChild.outerHTML);
+        if (id === "tabA") {
+          this.setState({
+            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+            tabASelections: [],
+          });
+        } else {
+          this.setState({
+            tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1,
+            tabBSelections: [],
+          });
+        }
+      }
+    };
+
     const selectAll = (id) => {
       const ref = id === "tabA" ? this.tabAref : this.tabBref;
       if (!ref.current || !ref.current.contentRef.current) return;
@@ -335,6 +359,7 @@ class AlignmentView extends React.Component {
                       updateSelection("tabA", domElm, teiElm, rootElm)
                     }
                     onTokenize={() => tokenizeSelection("tabA")}
+                    onTokenizeAll={() => tokenizeAll("tabA")}
                     onSelectAll={() => selectAll("tabA")}
                     onDeselectAll={() => deselectAll("tabA")}
                     hasSelection={tabAHasSelection}
@@ -353,6 +378,7 @@ class AlignmentView extends React.Component {
                       updateSelection("tabB", domElm, teiElm, rootElm)
                     }
                     onTokenize={() => tokenizeSelection("tabB")}
+                    onTokenizeAll={() => tokenizeAll("tabB")}
                     onSelectAll={() => selectAll("tabB")}
                     onDeselectAll={() => deselectAll("tabB")}
                     hasSelection={tabBHasSelection}
