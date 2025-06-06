@@ -4,6 +4,7 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select from "@mui/material/Select";
+import Button from "@mui/material/Button";
 
 import data from "../Data.js";
 import CETEIHelper from "../CETEIHelper.js";
@@ -46,6 +47,7 @@ class AlignTab extends React.Component {
      * @param {HTMLElement} teiElm - The TEI element related to domElm.
      */
     const alignLogic = (id, rootElm, domElm, teiElm) => {
+      domElm.__teiElm = teiElm;
       domElm.addEventListener("click", (e) => {
         this.props.onSelectionChanged(domElm, teiElm, rootElm);
         e.stopPropagation();
@@ -126,6 +128,31 @@ class AlignTab extends React.Component {
               ))}
           </Select>
         </FormControl>
+
+        <Box sx={{ display: "flex", gap: 1, my: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={this.props.onTokenize}
+            disabled={!this.props.hasSelection}
+          >
+            Tokenize selection
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={this.props.onSelectAll}
+          >
+            Select all
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={this.props.onDeselectAll}
+          >
+            Deselect all
+          </Button>
+        </Box>
 
         {/* Content container for dynamic TEI elements */}
         <div ref={this.contentRef} />
