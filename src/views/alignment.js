@@ -35,20 +35,12 @@ class AlignmentView extends React.Component {
       listRefreshNeeded: 0,
       category: ALIGNMENT_CATEGORIES[0],
     };
+
+    this.tabAref = React.createRef();
+    this.tabBref = React.createRef();
   }
 
   render() {
-    const tabAref = React.createRef();
-    const tabBref = React.createRef();
-
-    const tokenizeLink = () => {
-      if (this.state.tabASelections.length) {
-        tokenize(true, this.state.tabALanguage, this.state.tabASelections);
-      } else {
-        tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
-      }
-    };
-
     const tokenizeArray = (parts) => {
       let whitespaces = [];
       let current = "";
@@ -135,16 +127,91 @@ class AlignmentView extends React.Component {
           selections[0].teiElm.ownerDocument.firstElementChild.outerHTML,
         );
 
+        selections.forEach((a) => {
+          a.domElm.classList.remove("selectedTEI");
+          a.domElm.classList.remove("selectableTEI");
+        });
+
         if (isA) {
           this.setState({
             tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+            tabASelections: [],
           });
         } else {
           this.setState({
             tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1,
+            tabBSelections: [],
           });
         }
       }
+    };
+
+    const tokenizeSelection = (id) => {
+      if (id === "tabA") {
+        tokenize(true, this.state.tabALanguage, this.state.tabASelections);
+      } else {
+        tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
+      }
+    };
+
+    const tokenizeAll = (id) => {
+      const language = id === "tabA" ? this.state.tabALanguage : this.state.tabBLanguage;
+      if (!language) return;
+      const parser = new DOMParser();
+      const dom = parser.parseFromString(
+        data.getDocumentPerLanguage(language),
+        "text/xml",
+      );
+      if (tokenizeInternal(dom.firstElementChild)) {
+        data.updateDocumentPerLanguage(language, dom.firstElementChild.outerHTML);
+        if (id === "tabA") {
+          this.setState({
+            tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+            tabASelections: [],
+          });
+        } else {
+          this.setState({
+            tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1,
+            tabBSelections: [],
+          });
+        }
+      }
+    };
+
+    const selectAll = (id) => {
+      const ref = id === "tabA" ? this.tabAref : this.tabBref;
+      if (!ref.current || !ref.current.contentRef.current) return;
+
+      const domElms = Array.from(
+        ref.current.contentRef.current.querySelectorAll("*"),
+      ).filter((elm) => elm.__teiElm);
+
+      const selections = domElms.map((domElm) => {
+        domElm.classList.add("selectedTEI");
+        domElm.classList.remove("selectableTEI");
+        return { domElm, teiElm: domElm.__teiElm };
+      });
+
+      const newState = {};
+      newState[id === "tabA" ? "tabASelections" : "tabBSelections"] =
+        selections;
+      this.setState(newState);
+    };
+
+    const deselectAll = (id) => {
+      const ref = id === "tabA" ? this.tabAref : this.tabBref;
+      if (!ref.current || !ref.current.contentRef.current) return;
+
+      Array.from(
+        ref.current.contentRef.current.querySelectorAll(".selectedTEI"),
+      ).forEach((domElm) => {
+        domElm.classList.remove("selectedTEI");
+        domElm.classList.remove("selectableTEI");
+      });
+
+      const newState = {};
+      newState[id === "tabA" ? "tabASelections" : "tabBSelections"] = [];
+      this.setState(newState);
     };
 
     const createLink = () => {
@@ -263,6 +330,9 @@ class AlignmentView extends React.Component {
     const linkDisabled =
       !this.state.tabASelections.length || !this.state.tabBSelections.length;
 
+    const tabAHasSelection = this.state.tabASelections.length > 0;
+    const tabBHasSelection = this.state.tabBSelections.length > 0;
+
     return (
       <Box>
         <Title title="Align the translations" />
@@ -281,12 +351,18 @@ class AlignmentView extends React.Component {
                 <Grid item xs={6}>
                   <AlignTab
                     id="tabA"
+                    ref={this.tabAref}
                     onLanguageChanged={(language) =>
                       languageChanged("tabA", language)
                     }
                     onSelectionChanged={(domElm, teiElm, rootElm) =>
                       updateSelection("tabA", domElm, teiElm, rootElm)
                     }
+                    onTokenize={() => tokenizeSelection("tabA")}
+                    onTokenizeAll={() => tokenizeAll("tabA")}
+                    onSelectAll={() => selectAll("tabA")}
+                    onDeselectAll={() => deselectAll("tabA")}
+                    hasSelection={tabAHasSelection}
                     excludeLanguage={this.state.tabBLanguage}
                     refreshNeeded={this.state.tabARefreshNeeded}
                   />
@@ -294,12 +370,18 @@ class AlignmentView extends React.Component {
                 <Grid item xs={6}>
                   <AlignTab
                     id="tabB"
+                    ref={this.tabBref}
                     onLanguageChanged={(language) =>
                       languageChanged("tabB", language)
                     }
                     onSelectionChanged={(domElm, teiElm, rootElm) =>
                       updateSelection("tabB", domElm, teiElm, rootElm)
                     }
+                    onTokenize={() => tokenizeSelection("tabB")}
+                    onTokenizeAll={() => tokenizeAll("tabB")}
+                    onSelectAll={() => selectAll("tabB")}
+                    onDeselectAll={() => deselectAll("tabB")}
+                    hasSelection={tabBHasSelection}
                     excludeLanguage={this.state.tabALanguage}
                     refreshNeeded={this.state.tabBRefreshNeeded}
                   />
@@ -310,19 +392,6 @@ class AlignmentView extends React.Component {
           <Grid item xs={3}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
-                  id="tokenize-link"
-                  variant="contained"
-                  disabled={
-                    (!this.state.tabASelections.length &&
-                      !this.state.tabBSelections.length) ||
-                    (this.state.tabASelections.length &&
-                      this.state.tabBSelections.length)
-                  }
-                  onClick={tokenizeLink}
-                >
-                  Tokenize selection
-                </Button>
                 <AutomagicButton
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
