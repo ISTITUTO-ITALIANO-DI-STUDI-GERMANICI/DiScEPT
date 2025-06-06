@@ -35,20 +35,12 @@ class AlignmentView extends React.Component {
       listRefreshNeeded: 0,
       category: ALIGNMENT_CATEGORIES[0],
     };
+
+    this.tabAref = React.createRef();
+    this.tabBref = React.createRef();
   }
 
   render() {
-    const tabAref = React.createRef();
-    const tabBref = React.createRef();
-
-    const tokenizeLink = () => {
-      if (this.state.tabASelections.length) {
-        tokenize(true, this.state.tabALanguage, this.state.tabASelections);
-      } else {
-        tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
-      }
-    };
-
     const tokenizeArray = (parts) => {
       let whitespaces = [];
       let current = "";
@@ -145,6 +137,50 @@ class AlignmentView extends React.Component {
           });
         }
       }
+    };
+
+    const tokenizeSelection = (id) => {
+      if (id === "tabA") {
+        tokenize(true, this.state.tabALanguage, this.state.tabASelections);
+      } else {
+        tokenize(false, this.state.tabBLanguage, this.state.tabBSelections);
+      }
+    };
+
+    const selectAll = (id) => {
+      const ref = id === "tabA" ? this.tabAref : this.tabBref;
+      if (!ref.current || !ref.current.contentRef.current) return;
+
+      const domElms = Array.from(
+        ref.current.contentRef.current.querySelectorAll("*"),
+      ).filter((elm) => elm.__teiElm);
+
+      const selections = domElms.map((domElm) => {
+        domElm.classList.add("selectedTEI");
+        domElm.classList.remove("selectableTEI");
+        return { domElm, teiElm: domElm.__teiElm };
+      });
+
+      const newState = {};
+      newState[id === "tabA" ? "tabASelections" : "tabBSelections"] =
+        selections;
+      this.setState(newState);
+    };
+
+    const deselectAll = (id) => {
+      const ref = id === "tabA" ? this.tabAref : this.tabBref;
+      if (!ref.current || !ref.current.contentRef.current) return;
+
+      Array.from(
+        ref.current.contentRef.current.querySelectorAll(".selectedTEI"),
+      ).forEach((domElm) => {
+        domElm.classList.remove("selectedTEI");
+        domElm.classList.remove("selectableTEI");
+      });
+
+      const newState = {};
+      newState[id === "tabA" ? "tabASelections" : "tabBSelections"] = [];
+      this.setState(newState);
     };
 
     const createLink = () => {
@@ -263,6 +299,9 @@ class AlignmentView extends React.Component {
     const linkDisabled =
       !this.state.tabASelections.length || !this.state.tabBSelections.length;
 
+    const tabAHasSelection = this.state.tabASelections.length > 0;
+    const tabBHasSelection = this.state.tabBSelections.length > 0;
+
     return (
       <Box>
         <Title title="Align the translations" />
@@ -281,12 +320,17 @@ class AlignmentView extends React.Component {
                 <Grid item xs={6}>
                   <AlignTab
                     id="tabA"
+                    ref={this.tabAref}
                     onLanguageChanged={(language) =>
                       languageChanged("tabA", language)
                     }
                     onSelectionChanged={(domElm, teiElm, rootElm) =>
                       updateSelection("tabA", domElm, teiElm, rootElm)
                     }
+                    onTokenize={() => tokenizeSelection("tabA")}
+                    onSelectAll={() => selectAll("tabA")}
+                    onDeselectAll={() => deselectAll("tabA")}
+                    hasSelection={tabAHasSelection}
                     excludeLanguage={this.state.tabBLanguage}
                     refreshNeeded={this.state.tabARefreshNeeded}
                   />
@@ -294,12 +338,17 @@ class AlignmentView extends React.Component {
                 <Grid item xs={6}>
                   <AlignTab
                     id="tabB"
+                    ref={this.tabBref}
                     onLanguageChanged={(language) =>
                       languageChanged("tabB", language)
                     }
                     onSelectionChanged={(domElm, teiElm, rootElm) =>
                       updateSelection("tabB", domElm, teiElm, rootElm)
                     }
+                    onTokenize={() => tokenizeSelection("tabB")}
+                    onSelectAll={() => selectAll("tabB")}
+                    onDeselectAll={() => deselectAll("tabB")}
+                    hasSelection={tabBHasSelection}
                     excludeLanguage={this.state.tabALanguage}
                     refreshNeeded={this.state.tabBRefreshNeeded}
                   />
@@ -310,19 +359,6 @@ class AlignmentView extends React.Component {
           <Grid item xs={3}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Button
-                  id="tokenize-link"
-                  variant="contained"
-                  disabled={
-                    (!this.state.tabASelections.length &&
-                      !this.state.tabBSelections.length) ||
-                    (this.state.tabASelections.length &&
-                      this.state.tabBSelections.length)
-                  }
-                  onClick={tokenizeLink}
-                >
-                  Tokenize selection
-                </Button>
                 <AutomagicButton
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
