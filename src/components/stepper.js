@@ -82,7 +82,10 @@ export default function DisceptStepper({ steps, onChange, onToggle, open }) {
           {steps.map((step, index) => (
             <StyledStep key={step.label} active={activeStep === index}>
               <StepLabel>
-                <StyledButton onClick={() => activate(index)}>
+                <StyledButton
+                  id={`step-${index + 1}`}
+                  onClick={() => activate(index)}
+                >
                   {step.label}
                 </StyledButton>
               </StepLabel>
