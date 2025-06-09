@@ -9,6 +9,7 @@ import Button from "@mui/material/Button"; // Button component
 import TextField from "@mui/material/TextField"; // TextField for user input
 
 import data from "../Data.js"; // Custom data module for handling file data
+import { parseTEIFile } from "../TEIUtils.js";
 
 // DisceptFileUploader Component - Handles file upload with validation, error handling, and modal dialogs
 export default function DisceptFileUploader({ fileUploaded, onChange }) {
@@ -38,15 +39,27 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
     data.readFromFile(file).then(fileLoaded, catchError);
   }
 
+  // Check if the uploaded file is a DiScEPT TEI or just plain TEI
+  async function detectFile(file) {
+    try {
+      const { isDiscept } = await parseTEIFile(file);
+
+      if (!isDiscept) {
+        setNoDisceptDialogShown(true);
+      } else if (data.isChanged) {
+        setOverwriteDialogShown(true);
+      } else {
+        readFile(file);
+      }
+    } catch (err) {
+      catchError(err);
+    }
+  }
+
   // Watches file prop and initiates file processing if a new file is uploaded
   if (file !== fileUploaded) {
     setFile(fileUploaded);
-
-    if (data.isChanged) {
-      setOverwriteDialogShown(true); // If there are unsaved changes, show overwrite confirmation dialog
-    } else {
-      readFile(fileUploaded); // Otherwise, proceed to read the new file
-    }
+    detectFile(fileUploaded);
   }
 
   // Closes the overwrite confirmation dialog
