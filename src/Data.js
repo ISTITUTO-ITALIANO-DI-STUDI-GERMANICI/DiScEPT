@@ -97,7 +97,7 @@ const helpers = [
     },
   },
 
-  // Authors and responsible persons
+  // Authors
   {
     setter: (dom, data) => {
       const tsRes = dom.evaluate(
@@ -111,7 +111,6 @@ const helpers = [
       if (!titleStmt) return;
 
       Array.from(titleStmt.querySelectorAll("author")).forEach((e) => e.remove());
-      Array.from(titleStmt.querySelectorAll("respStmt")).forEach((e) => e.remove());
 
       if (Array.isArray(data.project.authors)) {
         data.project.authors.forEach((a) => {
@@ -121,6 +120,36 @@ const helpers = [
           titleStmt.appendChild(elm);
         });
       }
+    },
+    getter: (dom, data) => {
+      const authorsIter = TEIAuthors(dom);
+      const authors = [];
+      while (true) {
+        const a = authorsIter.iterateNext();
+        if (!a) break;
+        authors.push(a.textContent);
+      }
+
+      const project = data.project || {};
+      if (authors.length) project.authors = authors;
+      data.project = project;
+    },
+  },
+
+  // Responsible persons
+  {
+    setter: (dom, data) => {
+      const tsRes = dom.evaluate(
+        "/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      const titleStmt = tsRes.iterateNext();
+      if (!titleStmt) return;
+
+      Array.from(titleStmt.querySelectorAll("respStmt")).forEach((e) => e.remove());
 
       if (Array.isArray(data.project.resps)) {
         data.project.resps.forEach((r) => {
@@ -134,14 +163,6 @@ const helpers = [
       }
     },
     getter: (dom, data) => {
-      const authorsIter = TEIAuthors(dom);
-      const authors = [];
-      while (true) {
-        const a = authorsIter.iterateNext();
-        if (!a) break;
-        authors.push(a.textContent);
-      }
-
       const respsIter = TEIResps(dom);
       const resps = [];
       while (true) {
@@ -151,7 +172,6 @@ const helpers = [
       }
 
       const project = data.project || {};
-      if (authors.length) project.authors = authors;
       if (resps.length) project.resps = resps;
       data.project = project;
     },
