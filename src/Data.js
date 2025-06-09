@@ -1,4 +1,4 @@
-const TEI_NS = "http://www.tei-c.org/ns/1.0";
+import { TEI_NS, parseTEIFile } from "./TEIUtils.js";
 
 const TEITitle = (dom) =>
   dom.evaluate(
@@ -650,24 +650,9 @@ class Data {
   }
 
   async readFromFile(file) {
-    const parser = new DOMParser();
-    const dom = parser.parseFromString(await file.text(), "text/xml");
+    const { dom, isDiscept } = await parseTEIFile(file);
 
-    if (
-      !dom.firstElementChild ||
-      // What about TEICorpus? TODO
-      dom.firstElementChild.tagName !== "TEI" ||
-      dom.firstElementChild.namespaceURI !== TEI_NS
-    ) {
-      throw new Error(Data.ERR_INVALID_TYPE);
-    }
-
-    // TEI/text is not our model.
-    if (
-      Array.from(dom.firstElementChild.children).find(
-        (a) => a.tagName === "text",
-      )
-    ) {
+    if (!isDiscept) {
       throw new Error(Data.ERR_NO_DISCEPT);
     }
 
