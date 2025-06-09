@@ -41,7 +41,7 @@ function FinalView() {
         the format that best suits your needs for data analysis or digital
         humanities projects.
       </p>
-      <Button variant="contained" onClick={downloadTEI}>
+      <Button id="download-tei" variant="contained" onClick={downloadTEI}>
         TEI/XML DiScEPT file
       </Button>
 
@@ -52,7 +52,7 @@ function FinalView() {
         accessible and well-presented. It simplifies the process, making digital
         publication more efficient and widely available.
       </p>
-      <Button variant="contained" onClick={downloadTEIPublisherApp}>
+      <Button id="download-publisher" variant="contained" onClick={downloadTEIPublisherApp}>
         TEI-Publisher app
       </Button>
 
@@ -64,7 +64,7 @@ function FinalView() {
         elements, enhancing user experience and engagement with your scholarly
         work.
       </p>
-      <Button variant="contained" onClick={showEmbeddedCode}>
+      <Button id="show-html" variant="contained" onClick={showEmbeddedCode}>
         HTML embedded code
       </Button>
     </Box>
@@ -75,7 +75,29 @@ const FinalOnboarding = [
   {
     popover: {
       title: "Final section",
-      description: "TODO",
+      description:
+        "Choose how to export your edition: as TEI, a TEI Publisher application or plain HTML.",
+    },
+  },
+  {
+    element: "#download-tei",
+    popover: {
+      title: "Download TEI",
+      description: "Export the project as a single TEI/XML file.",
+    },
+  },
+  {
+    element: "#download-publisher",
+    popover: {
+      title: "TEI Publisher app",
+      description: "Generate a package ready to use with TEI Publisher.",
+    },
+  },
+  {
+    element: "#show-html",
+    popover: {
+      title: "HTML code",
+      description: "Get embeddable HTML for quick publishing.",
     },
   },
 ];

@@ -68,6 +68,7 @@ function ProjectView() {
       <Box sx={{ mb: 2 }}>
         <div>
           <Button
+            id="project-save"
             variant="contained"
             sx={{ mt: 1, mr: 1 }}
             disabled={!validForm}
@@ -85,12 +86,24 @@ const ProjectOnboarding = [
   {
     popover: {
       title: "Project section",
-      description: "TODO",
+      description:
+        "Insert the general metadata of your edition: title, authors, responsible persons and publication statement.",
     },
   },
   {
     element: "#project-fields",
-    popover: { title: "Customize your project", description: "TODO" },
+    popover: {
+      title: "Project fields",
+      description:
+        "Fill in these fields. Required ones are marked."
+    },
+  },
+  {
+    element: "#project-save",
+    popover: {
+      title: "Save project",
+      description: "Store the metadata before moving to the next step.",
+    },
   },
 ];
 

@@ -10,7 +10,7 @@ import CETEIHelper from "../CETEIHelper.js"; // Helper for transforming TEI XML 
 const MAGIC_URL = "http://localhost:5000/align";
 
 // AutomagicButton Component - Button to initiate alignment process between two languages
-export default function AutomagicButton({ languageA, languageB }) {
+export default function AutomagicButton({ languageA, languageB, ...props }) {
   // State to manage loading indicator during API request
   const [loading, setLoading] = React.useState(false);
 
@@ -72,6 +72,7 @@ export default function AutomagicButton({ languageA, languageB }) {
       variant="contained"
       disabled={loading || languageA === "" || languageB === ""}
       onClick={click}
+      {...props}
     >
       <Content loading={loading} />
     </Button>

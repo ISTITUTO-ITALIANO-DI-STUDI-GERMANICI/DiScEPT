@@ -221,24 +221,37 @@ const ImageOnboarding = [
   {
     popover: {
       title: "Image section",
-      description: "TODO",
+      description:
+        "Associate image resources with selected text segments.",
     },
   },
   {
     element: "#tab-select",
-    popover: { title: "Pick a language", description: "TODO" },
+    popover: {
+      title: "Pick a language",
+      description: "Choose the language of the text you want to illustrate.",
+    },
   },
   {
     element: "#type-select",
-    popover: { title: "Select an image type", description: "TODO" },
+    popover: {
+      title: "Image type",
+      description: "Select a URL or IIIF resource.",
+    },
   },
   {
     element: "#imageURL",
-    popover: { title: "Add an imageURL", description: "TODO" },
+    popover: {
+      title: "Image URL",
+      description: "Provide the link to the image you want to attach.",
+    },
   },
   {
     element: "#create-image",
-    popover: { title: "Save the image", description: "TODO" },
+    popover: {
+      title: "Save image",
+      description: "Link the selected text to the image resource.",
+    },
   },
 ];
 
