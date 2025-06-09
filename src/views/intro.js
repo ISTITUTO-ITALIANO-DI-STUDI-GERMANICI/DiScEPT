@@ -125,45 +125,58 @@ const IntroOnboarding = [
     popover: {
       title: "DiScEPT",
       description:
-        "DiScEPT is a nice tool. But we need to write the documentation! TODO",
+        "This wizard guides you through the creation of a digital scholarly edition. Each step focuses on a different task.",
     },
   },
   {
     element: "#discept-file-uploader",
     popover: {
       title: "Upload your TEI files",
-      description: "DiScEPT supports TEI as input and as output. TODO",
+      description:
+        "Use this button to import a DiScEPT file or to add new TEI documents as languages.",
     },
   },
   {
     element: "#step-1",
     popover: {
       title: "Project description",
-      description: "Here you can write your project details",
+      description: "Set the basic metadata of your edition, such as title and authors.",
     },
   },
   {
     element: "#step-2",
-    popover: { title: "Define your translation sources", description: "TODO" },
+    popover: {
+      title: "Edit TEI documents",
+      description: "Create or upload the texts and manage them per language.",
+    },
   },
   {
     element: "#step-3",
-    popover: { title: "Align your translation sources", description: "TODO" },
+    popover: {
+      title: "Align translations",
+      description: "Link corresponding passages between different languages.",
+    },
   },
   {
     element: "#step-4",
     popover: {
-      title: "Image support",
-      description: "Do you want to add images? TODO",
+      title: "Images",
+      description: "Attach external images or IIIF resources to selected text.",
     },
   },
   {
     element: "#step-5",
-    popover: { title: "Download your final TEI", description: "TODO" },
+    popover: {
+      title: "Finalize",
+      description: "Export the project as TEI, a TEI Publisher app or HTML code.",
+    },
   },
   {
     element: "#help",
-    popover: { title: "Click here for help!", description: "TODO" },
+    popover: {
+      title: "Need help?",
+      description: "Start this guided tour again by clicking here.",
+    },
   },
 ];
 
