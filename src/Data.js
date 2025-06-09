@@ -18,6 +18,24 @@ const TEIPubStatement = (dom) =>
     null,
   );
 
+const TEIAuthors = (dom) =>
+  dom.evaluate(
+    "/tei:TEI/tei:teiHeader//tei:titleStmt/tei:author",
+    dom,
+    (prefix) => (prefix === "tei" ? TEI_NS : null),
+    XPathResult.ANY_TYPE,
+    null,
+  );
+
+const TEIResps = (dom) =>
+  dom.evaluate(
+    "/tei:TEI/tei:teiHeader//tei:titleStmt/tei:respStmt/tei:name",
+    dom,
+    (prefix) => (prefix === "tei" ? TEI_NS : null),
+    XPathResult.ANY_TYPE,
+    null,
+  );
+
 const TEIStandOffStatement = (dom) =>
   dom.evaluate(
     "/tei:TEI/tei:standOff",
@@ -76,6 +94,86 @@ const helpers = [
         project.pubStatement = elm.textContent;
         data.project = project;
       }
+    },
+  },
+
+  // Authors
+  {
+    setter: (dom, data) => {
+      const tsRes = dom.evaluate(
+        "/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      const titleStmt = tsRes.iterateNext();
+      if (!titleStmt) return;
+
+      Array.from(titleStmt.querySelectorAll("author")).forEach((e) => e.remove());
+
+      if (Array.isArray(data.project.authors)) {
+        data.project.authors.forEach((a) => {
+          if (!a) return;
+          const elm = dom.createElementNS(TEI_NS, "author");
+          elm.textContent = a;
+          titleStmt.appendChild(elm);
+        });
+      }
+    },
+    getter: (dom, data) => {
+      const authorsIter = TEIAuthors(dom);
+      const authors = [];
+      while (true) {
+        const a = authorsIter.iterateNext();
+        if (!a) break;
+        authors.push(a.textContent);
+      }
+
+      const project = data.project || {};
+      if (authors.length) project.authors = authors;
+      data.project = project;
+    },
+  },
+
+  // Responsible persons
+  {
+    setter: (dom, data) => {
+      const tsRes = dom.evaluate(
+        "/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt",
+        dom,
+        (prefix) => (prefix === "tei" ? TEI_NS : null),
+        XPathResult.ANY_TYPE,
+        null,
+      );
+      const titleStmt = tsRes.iterateNext();
+      if (!titleStmt) return;
+
+      Array.from(titleStmt.querySelectorAll("respStmt")).forEach((e) => e.remove());
+
+      if (Array.isArray(data.project.resps)) {
+        data.project.resps.forEach((r) => {
+          if (!r) return;
+          const respStmt = dom.createElementNS(TEI_NS, "respStmt");
+          const nameElm = dom.createElementNS(TEI_NS, "name");
+          nameElm.textContent = r;
+          respStmt.appendChild(nameElm);
+          titleStmt.appendChild(respStmt);
+        });
+      }
+    },
+    getter: (dom, data) => {
+      const respsIter = TEIResps(dom);
+      const resps = [];
+      while (true) {
+        const r = respsIter.iterateNext();
+        if (!r) break;
+        resps.push(r.textContent);
+      }
+
+      const project = data.project || {};
+      if (resps.length) project.resps = resps;
+      data.project = project;
     },
   },
 
@@ -688,8 +786,6 @@ class Data {
       helper.setter(dom, this);
     }
 
-    // TODO: authors
-    // TODO: resp
     // TODO: groups for images
 
     const s = new XMLSerializer();
