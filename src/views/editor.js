@@ -208,12 +208,16 @@ const EditorOnboarding = [
   {
     popover: {
       title: "Editor section",
-      description: "TODO",
+      description:
+        "Manage the TEI sources for each language. Select a language, edit the XML and switch to the preview tab to see the result.",
     },
   },
   {
     element: "#editor-add-language",
-    popover: { title: "Click here to add a language", description: "TODO" },
+    popover: {
+      title: "Add language",
+      description: "Create a new TEI document for another language.",
+    },
   },
   // TODO: dynamci add a language if needed
 ];

@@ -393,6 +393,7 @@ class AlignmentView extends React.Component {
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <AutomagicButton
+                  id="auto-align"
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
                 >
@@ -467,20 +468,44 @@ const AlignmentOnboarding = [
   {
     popover: {
       title: "Alignment section",
-      description: "TODO",
+      description:
+        "Select two languages, choose portions of text and link them together. You can categorize each link and even run an automatic alignment.",
     },
   },
   {
     element: "#tabA-select",
-    popover: { title: "Pick a language", description: "TODO" },
+    popover: {
+      title: "Language A",
+      description: "Select the first language to align.",
+    },
   },
   {
     element: "#tabB-select",
-    popover: { title: "Pick a language", description: "TODO" },
+    popover: {
+      title: "Language B",
+      description: "Select the second language to align.",
+    },
+  },
+  {
+    element: "#auto-align",
+    popover: {
+      title: "AI alignment",
+      description: "Let the system suggest links automatically.",
+    },
   },
   {
     element: "#alignment-link",
-    popover: { title: "Create a link", description: "TODO" },
+    popover: {
+      title: "Create a link",
+      description: "Link the selected segments manually.",
+    },
+  },
+  {
+    element: "#category-select",
+    popover: {
+      title: "Category",
+      description: "Choose the type of relation for the current link.",
+    },
   },
 ];
 

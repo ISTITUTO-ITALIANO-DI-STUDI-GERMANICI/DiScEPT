@@ -97,7 +97,7 @@ export default function DisceptAppBar({
 
             {/* Help */}
             <Tooltip title="Aiuto">
-              <IconButton color="inherit" onClick={onHelp}>
+              <IconButton id="help" color="inherit" onClick={onHelp}>
                 <HelpIcon />
               </IconButton>
             </Tooltip>
