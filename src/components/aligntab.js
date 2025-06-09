@@ -48,6 +48,12 @@ class AlignTab extends React.Component {
      */
     const alignLogic = (id, rootElm, domElm, teiElm) => {
       domElm.__teiElm = teiElm;
+
+      // Apply hover events only to TEI leaves (elements without TEI children)
+      if (teiElm.children.length > 0) {
+        return;
+      }
+
       domElm.addEventListener("click", (e) => {
         this.props.onSelectionChanged(domElm, teiElm, rootElm);
         e.stopPropagation();
