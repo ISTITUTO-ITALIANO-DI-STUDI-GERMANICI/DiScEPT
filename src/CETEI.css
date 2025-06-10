@@ -1,0 +1,17 @@
+.selectableTEI {
+  background-color: rgba(228, 220, 207, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.selectedTEI {
+  background-color: rgba(94, 146, 120, 0.45);
+  border: 2px solid #5E9278;
+  border-radius: 4px;
+  color: #fff;
+}
+
+.previewAlignmentTEI {
+  background-color: rgba(228, 220, 207, 0.6) !important;
+  border-radius: 4px !important;
+}
