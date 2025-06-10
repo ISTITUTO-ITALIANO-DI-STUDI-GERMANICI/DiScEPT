@@ -83,7 +83,8 @@ const helpers = [
   {
     setter: (dom, data) => {
       if (data.project.pubStatement) {
-        TEIPubStatement(dom).iterateNext().textContent = data.project.pubStatement;
+        TEIPubStatement(dom).iterateNext().textContent =
+          data.project.pubStatement;
       }
     },
     getter: (dom, data) => {
@@ -110,7 +111,9 @@ const helpers = [
       const titleStmt = tsRes.iterateNext();
       if (!titleStmt) return;
 
-      Array.from(titleStmt.querySelectorAll("author")).forEach((e) => e.remove());
+      Array.from(titleStmt.querySelectorAll("author")).forEach((e) =>
+        e.remove(),
+      );
 
       if (Array.isArray(data.project.authors)) {
         data.project.authors.forEach((a) => {
@@ -149,7 +152,9 @@ const helpers = [
       const titleStmt = tsRes.iterateNext();
       if (!titleStmt) return;
 
-      Array.from(titleStmt.querySelectorAll("respStmt")).forEach((e) => e.remove());
+      Array.from(titleStmt.querySelectorAll("respStmt")).forEach((e) =>
+        e.remove(),
+      );
 
       if (Array.isArray(data.project.resps)) {
         data.project.resps.forEach((r) => {
@@ -739,12 +744,23 @@ class Data {
       url,
       type,
     });
+    this.#changed = true;
   }
 
   deleteImage(language, index) {
     if (this.#documents[language] && this.#documents[language].images) {
       this.#documents[language].images.splice(index, 1);
+      this.#changed = true;
     }
+  }
+
+  setImages(language, images) {
+    if (!this.#documents[language]) {
+      this.#documents[language] = {};
+    }
+
+    this.#documents[language].images = Array.isArray(images) ? images : [];
+    this.#changed = true;
   }
 
   async readFromFile(file) {
