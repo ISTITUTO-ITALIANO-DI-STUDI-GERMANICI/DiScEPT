@@ -1,0 +1,132 @@
+<TEI version="3.3.0" xmlns="http://www.tei-c.org/ns/1.0">
+ <teiHeader>
+  <fileDesc>
+   <titleStmt>
+    <title>DEMO</title>
+   <author>Tiziana Mancinelli</author></titleStmt>
+   <publicationStmt><p/></publicationStmt>
+  </fileDesc>
+ </teiHeader>
+ <standOff>
+    <linkGrp type="translation">
+      <link target="#3a698e8b-2943-4f73-b981-cb3a2fc2853f #b80ccbf8-62de-42ac-9ad0-7983519d4295" type="linguistic"/>
+      <link target="#3968e6fc-7b2c-4dd1-a7e5-bc3916649517 #b7cf7a42-9bdf-49ca-9f12-5a10d2d5c9c7" type="linguistic"/>
+      <link target="#be2faa74-9f77-4e6d-b33e-f0b6a5236147 #424a9e23-b1a8-48a3-8e3b-10b6daedc9b3" type="linguistic"/>
+      <link target="#f77ad86a-a260-42b4-8e5a-a0820b9678b0 #e2402185-d214-45c3-9f2f-3719db12335a" type="linguistic"/>
+      <link target="#6578ce82-c487-4598-9c4a-124a5ea4c100 #a61598f9-e8d6-462b-af94-3e47e391730d" type="linguistic"/>
+      <link target="#21d2b7c0-d23d-4806-87ab-d9718d88aa4e #4b4cd35f-8f2d-4f26-8d5a-61bc0754e36c" type="linguistic"/>
+      <link target="#8f985e63-89b7-48ca-ba67-a324b5ab6110 #5fe6f59e-9b49-49f7-9593-7157aa2a7233" type="linguistic"/>
+      <link target="#5fd29277-f32c-44e8-996c-5ec9049c0553 #875f27f8-4fd0-46ad-9c07-4f54ef8b1d59" type="linguistic"/>
+      <link target="#d8deeba0-52fb-4c34-a3e9-b8079186c60a #9bba4eb6-32e2-4193-b42f-97ec8122b15e" type="linguistic"/>
+      <link target="#e235e44a-6048-4f2e-a300-b7e1f6a76e9d #2aa1f4ba-ac98-4f24-abbc-57e84d1e6b98" type="linguistic"/>
+      <link target="#9f670940-4f19-41cf-b02a-c0cc3d2c8fa7 #3b21aba0-1f26-493f-9d80-311e5542a502" type="linguistic"/>
+      <link target="#fc419ce7-369e-404c-8e4b-c459276e34c7 #e6126f1a-0dd2-4e5b-929c-93c6eb24974d" type="linguistic"/>
+      <link target="#f609b475-d356-4a9b-85d6-ebccc6df906d #c74cb2fd-e922-44c8-9685-29f9a49be519" type="linguistic"/>
+      <link target="#3da922bd-201e-429d-84bc-8b5f222d3511 #571e4311-b3e4-4d96-a3d6-278f109e8b5b" type="linguistic"/>
+      <link target="#fe0bf9a8-f519-4230-ab4c-7cb07e7d5382 #9c0f2686-afae-4d3c-9bf5-1964eddbfdda" type="linguistic"/>
+      <link target="#14e95ae1-17a7-4be3-9744-66900f5c7e24 #bd79a48a-3b94-43cb-b545-b121661727d8" type="linguistic"/>
+    </linkGrp>
+</standOff>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>L'infinito</title>
+        <author>Giacomo Leopardi</author>
+        <editor xml:id="ed1">Tiziana Mancinelli</editor>
+      </titleStmt>
+      <publicationStmt>
+        <date when="1819">1819</date>
+        <availability>
+          <licence target="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</licence>
+        </availability>
+      </publicationStmt>
+      <sourceDesc>
+        <bibl>
+          Leopardi, Giacomo. <title>L'infinito</title>, composto nel 1819, incluso nei <title>Canti</title>.
+        </bibl>
+      </sourceDesc>
+    </fileDesc>
+  <profileDesc><langUsage><language ident="italiano">italiano</language></langUsage></profileDesc></teiHeader>
+
+  <text>
+    <body>
+      <lg type="poem" xml:id="inf-poem">
+        <head>L'infinito</head>
+        <lg type="stanza" xml:id="it-stanza1">
+          <l xml:id="3a698e8b-2943-4f73-b981-cb3a2fc2853f">Sempre caro mi fu quest’ermo colle,</l>
+          <l xml:id="3968e6fc-7b2c-4dd1-a7e5-bc3916649517">e questa siepe, che da tanta parte</l>
+          <l xml:id="be2faa74-9f77-4e6d-b33e-f0b6a5236147">de l’ultimo orizzonte il guardo esclude.</l>
+          <l xml:id="f77ad86a-a260-42b4-8e5a-a0820b9678b0">Ma sedendo e mirando, interminati</l>
+          <l xml:id="6578ce82-c487-4598-9c4a-124a5ea4c100">spazi di là da quella, e sovrumani</l>
+          <l xml:id="21d2b7c0-d23d-4806-87ab-d9718d88aa4e">silenzi, e profondissima quiete</l>
+          <l xml:id="8f985e63-89b7-48ca-ba67-a324b5ab6110">io nel pensier mi fingo, ove per poco</l>
+          <l xml:id="5fd29277-f32c-44e8-996c-5ec9049c0553">il cor non si spaura.</l>
+        </lg>
+        <lg type="stanza" xml:id="it-stanza2">
+          <l xml:id="d8deeba0-52fb-4c34-a3e9-b8079186c60a">E come il vento</l>
+          <l xml:id="e235e44a-6048-4f2e-a300-b7e1f6a76e9d">odo stormir tra queste piante, io quello</l>
+          <l xml:id="9f670940-4f19-41cf-b02a-c0cc3d2c8fa7">infinito silenzio a questa voce</l>
+          <l xml:id="fc419ce7-369e-404c-8e4b-c459276e34c7">vo comparando: e mi sovvien l’eterno,</l>
+          <l xml:id="f609b475-d356-4a9b-85d6-ebccc6df906d">e le morte stagioni, e la presente</l>
+          <l xml:id="3da922bd-201e-429d-84bc-8b5f222d3511">e viva, e il suon di lei. Così tra questa</l>
+          <l xml:id="fe0bf9a8-f519-4230-ab4c-7cb07e7d5382">immensità s’annega il pensier mio:</l>
+          <l xml:id="14e95ae1-17a7-4be3-9744-66900f5c7e24">e il naufragar m’è dolce in questo mare.</l>
+        </lg>
+      </lg>
+    </body>
+  </text>
+<facsimile/></TEI><TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>L'infinito – Traduzione tedesca</title>
+        <author>Giacomo Leopardi</author>
+        <respStmt>
+          <resp>Traduzione</resp>
+          <name>Rainer Maria Rilke</name>
+        </respStmt>
+        <editor xml:id="ed1">Tiziana Mancinelli</editor>
+      </titleStmt>
+      <publicationStmt>
+        <date notBefore="1900" notAfter="1926">inizio XX secolo</date>
+        <availability>
+          <licence target="https://creativecommons.org/publicdomain/mark/1.0/">Public Domain</licence>
+        </availability>
+      </publicationStmt>
+      <sourceDesc>
+        <bibl>
+          Leopardi, Giacomo. <title>L'infinito</title>, traduzione di Rainer Maria Rilke, in antologie varie del XX secolo.
+        </bibl>
+      </sourceDesc>
+    </fileDesc>
+  <profileDesc><langUsage><language ident="tedesco">tedesco</language></langUsage></profileDesc></teiHeader>
+
+  <text>
+    <body>
+      <lg type="poem" xml:id="inf-de">
+        <head>Das Unendliche</head>
+        <lg type="stanza" xml:id="de-stanza1">
+          <l xml:id="b80ccbf8-62de-42ac-9ad0-7983519d4295">Immer lieb war mir dieser einsame</l>
+          <l xml:id="b7cf7a42-9bdf-49ca-9f12-5a10d2d5c9c7">Hügel und das Gehölz, das fast ringsum</l>
+          <l xml:id="424a9e23-b1a8-48a3-8e3b-10b6daedc9b3">ausschließt vom fernen Aufruhn der Himmel</l>
+          <l xml:id="e2402185-d214-45c3-9f2f-3719db12335a">den Blick. Sitzend und schauend bild ich unendliche</l>
+          <l xml:id="a61598f9-e8d6-462b-af94-3e47e391730d">Räume jenseits mir ein und mehr als</l>
+          <l xml:id="4b4cd35f-8f2d-4f26-8d5a-61bc0754e36c">menschliches Schweigen und Ruhe vom Grunde der Ruh.</l>
+          <l xml:id="5fe6f59e-9b49-49f7-9593-7157aa2a7233">Und über ein Kleines geht mein Herz ganz ohne</l>
+          <l xml:id="875f27f8-4fd0-46ad-9c07-4f54ef8b1d59">Furcht damit um.</l>
+        </lg>
+        <lg type="stanza" xml:id="de-stanza2">
+          <l xml:id="9bba4eb6-32e2-4193-b42f-97ec8122b15e">Und wenn in dem Buschwerk</l>
+          <l xml:id="2aa1f4ba-ac98-4f24-abbc-57e84d1e6b98">aufrauscht der Wind, so überkommt es mich, dass ich</l>
+          <l xml:id="3b21aba0-1f26-493f-9d80-311e5542a502">dieses Lautsein vergleiche mit jener endlosen Stillheit.</l>
+          <l xml:id="e6126f1a-0dd2-4e5b-929c-93c6eb24974d">Und mir fällt das Ewige ein</l>
+          <l xml:id="c74cb2fd-e922-44c8-9685-29f9a49be519">und daneben die alten Jahreszeiten und diese</l>
+          <l xml:id="571e4311-b3e4-4d96-a3d6-278f109e8b5b">daseiende Zeit, die lebendige, tönende. Also</l>
+          <l xml:id="9c0f2686-afae-4d3c-9bf5-1964eddbfdda">sinkt der Gedanke mir weg ins Übermaß.</l>
+          <l xml:id="bd79a48a-3b94-43cb-b545-b121661727d8">Untergehen in diesem Meer ist inniger Schiffbruch.</l>
+        </lg>
+      </lg>
+    </body>
+  </text>
+<facsimile/></TEI></TEI>
