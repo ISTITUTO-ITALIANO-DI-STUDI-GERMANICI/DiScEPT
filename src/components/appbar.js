@@ -14,6 +14,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload"; // Icon represent
 import HelpIcon from "@mui/icons-material/Help"; // Help icon, typically for an assistance or info button
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import ExistDBSync from "./existdbsync.js";
 
 // Hidden input styled component for file upload input, visually hidden but still accessible for screen readers
 const VisuallyHiddenInput = styled("input")({
@@ -94,6 +95,8 @@ export default function DisceptAppBar({
                 />
               </IconButton>
             </Tooltip>
+
+            <ExistDBSync />
 
             {/* Help */}
             <Tooltip title="Aiuto">
