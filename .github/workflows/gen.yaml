@@ -38,9 +38,9 @@ jobs:
           git fetch -a -p
           git checkout origin/build -b build
           git pull origin build:build
-          git rm static assets -r
+          git rm static assets wc -r
           mv build/* .
           rm build node_modules -rf
-          git add static assets *
+          git add static assets wc *
           git commit -a -m "New build"
           git push origin build:build || echo "Nothing to do"
