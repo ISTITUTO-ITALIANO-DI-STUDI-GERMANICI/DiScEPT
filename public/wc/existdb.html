@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>TEI Alignment Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+  <tei-alignment-viewer src="http://localhost:8080/exist/apps/collection/discept.xml"></tei-alignment-viewer>
+
+  <script type="module">
+    class TEIAlignmentViewer extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this.linkMap = new Map();
+        this.colorMap = new Map();
+        this.locked = new Set();
+        this.showNumbers = true;
+      }
+
+      async connectedCallback() {
+        const url = this.getAttribute('src');
+        const response = await fetch(url);
+        const xmlText = await response.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText, "application/xml");
+
+        const shadow = this.shadowRoot;
+        const style = document.createElement("style");
+        style.textContent = `
+          :host {
+            font-family: sans-serif;
+            display: block;
+            padding: 1rem;
+            max-width: 1200px;
+            margin: auto;
+            background: #fafafa;
+          }
+          .header {
+            margin-bottom: 1rem;
+          }
+          .layout {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+          }
+          .sidebar {
+            width: 200px;
+            background: #fffbe6;
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+          }
+          .sidebar-toggle {
+            cursor: pointer;
+            background: #ffe066;
+            border: none;
+            width: 100%;
+            margin-bottom: 0.5rem;
+          }
+          .sidebar.minimized {
+            width: 30px;
+            padding: 0.25rem;
+            overflow: hidden;
+          }
+          .sidebar.minimized a {
+            display: none;
+          }
+          .sidebar a {
+            display: block;
+            font-size: 0.85rem;
+            color: #444;
+            text-decoration: none;
+            margin: 0.2rem 0;
+          }
+          .controls {
+            margin: 0.5rem 0;
+          }
+          .cards {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            flex: 1;
+          }
+          .card {
+            flex: 1;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 1rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+          }
+          .card h3 {
+            margin-top: 0;
+          }
+          .verse {
+            padding: 0.3rem 0.5rem;
+            margin: 0.15rem 0;
+            border-radius: 4px;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            position: relative;
+          }
+          .verse.locked {
+            box-shadow: inset 0 0 0 2px #bfa700;
+            outline: 1px solid #bfa700;
+          }
+          .verse.hovered {
+            outline: 1px solid #ffd000;
+            box-shadow: 0 0 5px #ffd000;
+          }
+          .verse-number {
+            position: absolute;
+            left: -2rem;
+            top: 0.2rem;
+            font-size: 0.75rem;
+            color: #aaa;
+          }
+          .hide-numbers .verse-number {
+            display: none;
+          }
+          @media (max-width: 768px) {
+            .layout {
+              flex-direction: column;
+            }
+            .cards {
+              flex-direction: column;
+            }
+            .sidebar {
+              width: 100%;
+              order: -1;
+            }
+          }
+        `;
+
+        const wrapper = document.createElement("div");
+
+        const title = xml.querySelector("teiHeader title")?.textContent || "Titolo";
+        const author = xml.querySelector("teiHeader author")?.textContent || "Autore";
+
+        wrapper.innerHTML = `
+          <div class="header">
+            <h2>${title}</h2>
+            <p><em>${author}</em></p>
+            <div class="controls">
+              <button id="toggleNumbers">🔢 Mostra/Nascondi numeri</button>
+            </div>
+          </div>
+        `;
+
+
+const palette = [
+  "#cce4f6","#d0f0dc","#e2d5f8","#f6d9c5","#c3e6cb","#d6d8fb",
+  "#b8e2e5","#ffd6e8","#d3e9b9","#f9c7e3","#c9cce3","#ffe0b2",
+  "#b5ead7","#d7cff9","#f2c2d6","#add8e6"
+];
+
+        const links = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link"));
+        links.forEach((link, idx) => {
+          const [id1, id2] = link.getAttribute("target").split(" ").map(s => s.replace("#", ""));
+          const color = palette[idx % palette.length];
+          this.linkMap.set(id1, id2);
+          this.linkMap.set(id2, id1);
+          this.colorMap.set(id1, color);
+          this.colorMap.set(id2, color);
+        });
+
+        const teis = xml.querySelectorAll("TEI");
+        const langData = { it: [], de: [] };
+
+        teis.forEach(tei => {
+          const lang = tei.querySelector("language")?.textContent?.toLowerCase();
+          const lines = tei.querySelectorAll("text > body l");
+          const verses = [];
+          lines.forEach((line, i) => {
+            const id = line.getAttribute("xml:id");
+            const text = line.textContent;
+            const color = this.colorMap.get(id) || "";
+            verses.push({ id, text, color, n: i + 1 });
+          });
+          if (lang.includes("italiano")) langData.it = verses;
+          if (lang.includes("tedesco")) langData.de = verses;
+        });
+
+        const layout = document.createElement("div");
+        layout.className = "layout";
+
+        const sidebar = document.createElement("div");
+        sidebar.className = "sidebar";
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "sidebar-toggle";
+        toggleBtn.textContent = "⇆";
+        toggleBtn.onclick = () => sidebar.classList.toggle("minimized");
+        sidebar.appendChild(toggleBtn);
+        links.forEach((link, idx) => {
+          const id1 = link.getAttribute("target").split(" ")[0].replace("#", "");
+          const a = document.createElement("a");
+          a.href = `#${id1}`;
+          a.textContent = `Verso ${idx + 1}`;
+          a.onclick = e => {
+            e.preventDefault();
+            this.scrollToVerses(id1);
+          };
+          sidebar.appendChild(a);
+        });
+
+        const cards = document.createElement("div");
+        cards.className = "cards";
+
+        const makeCard = (lang, label) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `<h3>${label}</h3>`;
+          langData[lang].forEach(({ id, text, color, n }) => {
+            const div = document.createElement("div");
+            div.className = "verse";
+            div.id = id;
+            div.dataset.id = id;
+            if (color) div.style.backgroundColor = color;
+            div.innerHTML = `<span class="verse-number">${n}</span>${text}`;
+            div.addEventListener("mouseenter", () => this.highlight(id, true));
+            div.addEventListener("mouseleave", () => {
+              if (!this.locked.has(id)) this.highlight(id, false);
+            });
+            div.addEventListener("click", () => {
+              if (this.locked.has(id)) {
+                this.locked.delete(id);
+                this.highlight(id, false);
+              } else {
+                this.locked.add(id);
+                this.highlight(id, true);
+              }
+            });
+            card.appendChild(div);
+          });
+          return card;
+        };
+
+        cards.appendChild(makeCard("it", "Testo Italiano"));
+        cards.appendChild(makeCard("de", "Traduzione Tedesca"));
+
+        layout.appendChild(sidebar);
+        layout.appendChild(cards);
+        wrapper.appendChild(layout);
+        shadow.appendChild(style);
+        shadow.appendChild(wrapper);
+
+        shadow.querySelector("#toggleNumbers").onclick = () => {
+          this.showNumbers = !this.showNumbers;
+          shadow.querySelectorAll(".card").forEach(card => {
+            card.classList.toggle("hide-numbers", !this.showNumbers);
+          });
+        };
+      }
+
+      highlight(id, on) {
+        const partnerId = this.linkMap.get(id);
+        const verses = this.shadowRoot.querySelectorAll(`[data-id="${id}"], [data-id="${partnerId}"]`);
+        verses.forEach(verse => verse.classList.toggle("hovered", on));
+        if (on) {
+          this.locked.has(id) && verses.forEach(v => v.classList.add("locked"));
+        } else {
+          this.locked.has(id) || verses.forEach(v => v.classList.remove("locked"));
+        }
+      }
+
+      scrollToVerses(id) {
+        const partnerId = this.linkMap.get(id);
+        const targets = this.shadowRoot.querySelectorAll(`#${id}, #${partnerId}`);
+        targets.forEach(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+        this.highlight(id, true);
+        setTimeout(() => {
+          if (!this.locked.has(id)) this.highlight(id, false);
+        }, 2000);
+      }
+    }
+
+    customElements.define('tei-alignment-viewer', TEIAlignmentViewer);
+  </script>
+
+</body>
+</html>
+
