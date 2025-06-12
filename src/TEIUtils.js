@@ -18,3 +18,22 @@ export async function parseTEIFile(file) {
 
   return { dom, isDiscept: !hasText };
 }
+
+export function parseTEIString(text) {
+  const parser = new DOMParser();
+  const dom = parser.parseFromString(text, "text/xml");
+
+  if (
+    !dom.firstElementChild ||
+    dom.firstElementChild.tagName !== "TEI" ||
+    dom.firstElementChild.namespaceURI !== TEI_NS
+  ) {
+    throw new Error("invalid");
+  }
+
+  const hasText = Array.from(dom.firstElementChild.children).some(
+    (a) => a.tagName === "text",
+  );
+
+  return { dom, isDiscept: !hasText };
+}
