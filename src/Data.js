@@ -1,4 +1,5 @@
-import { TEI_NS, parseTEIFile } from "./TEIUtils.js";
+import { TEI_NS, parseTEIFile, parseTEIString } from "./TEIUtils.js";
+import { listCollection, fetchFile, writeFile } from "./existdb.js";
 
 const TEITitle = (dom) =>
   dom.evaluate(
@@ -778,6 +779,47 @@ class Data {
 
     // TODO: extract the project details
 
+    this.#changed = false;
+  }
+
+  readFromString(str) {
+    const { dom, isDiscept } = parseTEIString(str);
+
+    if (!isDiscept) {
+      throw new Error(Data.ERR_NO_DISCEPT);
+    }
+
+    this.#documents = {};
+
+    for (const helper of helpers) {
+      helper.getter(dom, this);
+    }
+
+    this.#changed = false;
+  }
+
+  async readFromExistDB(url, collection, user, password) {
+    const files = await listCollection(url, collection, user, password);
+    const parser = new DOMParser();
+    const dom = parser.parseFromString(
+      `<TEI xmlns="${TEI_NS}"><teiHeader/><standOff/></TEI>`,
+      "text/xml",
+    );
+
+    for (const name of files) {
+      const xml = await fetchFile(url, collection, name, user, password);
+      const fileDom = parser.parseFromString(xml, "text/xml");
+      if (!fileDom.firstElementChild) continue;
+      dom.documentElement.appendChild(dom.importNode(fileDom.documentElement, true));
+    }
+
+    const s = new XMLSerializer();
+    this.readFromString(s.serializeToString(dom));
+  }
+
+  async saveToExistDB(url, collection, user, password) {
+    const xml = this.generateTEI();
+    await writeFile(url, collection, "discept.xml", xml, user, password);
     this.#changed = false;
   }
 
