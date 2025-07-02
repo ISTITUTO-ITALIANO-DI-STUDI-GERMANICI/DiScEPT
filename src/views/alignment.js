@@ -301,24 +301,24 @@ class AlignmentView extends React.Component {
     };
 
     const showAlignment = (index) => {
-      const a = data.getAlignments(
+      const alignments = data.getAlignments(
         this.state.tabALanguage,
         this.state.tabBLanguage,
       );
-      if (!a) {
+      if (!alignments || index >= alignments.length) {
         return;
       }
 
-      a.forEach((obj) => {
-        obj.a
-          .map((id) => document.getElementById(id))
-          .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
-        obj.b
-          .map((id) => document.getElementById(id))
-          .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
-      });
+      // Show only the specific alignment at the given index
+      const alignment = alignments[index];
+      alignment.a
+        .map((id) => document.getElementById(id))
+        .filter((elm) => elm)
+        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+      alignment.b
+        .map((id) => document.getElementById(id))
+        .filter((elm) => elm)
+        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
     };
 
     const hideAlignment = (index) => {
@@ -396,6 +396,16 @@ class AlignmentView extends React.Component {
                   id="auto-align"
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
+                  onAlignmentComplete={(count) => {
+                    // Use setTimeout to avoid state update during render
+                    setTimeout(() => {
+                      this.setState({ 
+                        listRefreshNeeded: this.state.listRefreshNeeded + 1,
+                        tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
+                        tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1
+                      });
+                    }, 0);
+                  }}
                 >
                   AI alignment
                 </AutomagicButton>
