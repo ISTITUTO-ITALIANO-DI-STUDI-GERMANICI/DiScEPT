@@ -7,7 +7,7 @@ import data from "../Data.js"; // Custom module to retrieve language-specific do
 import CETEIHelper from "../CETEIHelper.js"; // Helper for transforming TEI XML to HTML5
 
 // URL for backend API that performs text alignment
-const MAGIC_URL = process.env.REACT_APP_ALIGNMENT_URL || "http://localhost:8000/align/tei";
+const MAGIC_URL = process.env.REACT_APP_ALIGNMENT_URL || "https://bertalign-api-fpsfeeskyq-uc.a.run.app/align/tei";
 
 // AutomagicButton Component - Button to initiate alignment process between two languages
 export default function AutomagicButton({ languageA, languageB, onAlignmentComplete, ...props }) {
