@@ -6,7 +6,10 @@ import DialogContent from "@mui/material/DialogContent"; // Container for dialog
 import DialogContentText from "@mui/material/DialogContentText"; // Content text with default styling
 import DialogTitle from "@mui/material/DialogTitle"; // Dialog title
 import Button from "@mui/material/Button"; // Button component
-import TextField from "@mui/material/TextField"; // TextField for user input
+import FormControl from "@mui/material/FormControl"; // Form control for dropdown
+import InputLabel from "@mui/material/InputLabel"; // Label for form control
+import Select from "@mui/material/Select"; // Select dropdown component
+import MenuItem from "@mui/material/MenuItem"; // Menu items for select
 
 import data from "../Data.js"; // Custom data module for handling file data
 import { parseTEIFile } from "../TEIUtils.js";
@@ -21,7 +24,16 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
   const [noDisceptDialogShown, setNoDisceptDialogShown] = React.useState(false);
   const [loadCompletedDialogShown, setLoadCompletedDialogShown] =
     React.useState(false);
-  const [addingLanguage, setAddingLanguage] = React.useState(""); // Stores user input for language name
+  const [addingLanguage, setAddingLanguage] = React.useState(""); // Stores selected language from dropdown
+  
+  // Predefined list of supported languages
+  const LANGUAGES = [
+    { code: "it", name: "Italian" },
+    { code: "en", name: "English" },
+    { code: "de", name: "German" },
+    { code: "fr", name: "French" },
+    { code: "es", name: "Spanish" }
+  ];
 
   // Triggers when file loading completes successfully, showing a confirmation dialog
   function fileLoaded() {
@@ -181,22 +193,27 @@ export default function DisceptFileUploader({ fileUploaded, onChange }) {
             The uploaded file does not appear to be a DiScEPT TEI model. Do you
             want to import it as a language instead?
           </DialogContentText>
-          <TextField
-            autoFocus
-            required
-            margin="dense"
-            id="language"
-            name="language"
-            label="Language"
-            type="text"
-            fullWidth
-            variant="standard"
-            onChange={(e) => setAddingLanguage(e.target.value)}
-          />
+          <FormControl fullWidth margin="dense" variant="standard">
+            <InputLabel id="language-select-label">Language</InputLabel>
+            <Select
+              labelId="language-select-label"
+              id="language-select"
+              value={addingLanguage}
+              label="Language"
+              onChange={(e) => setAddingLanguage(e.target.value)}
+              autoFocus
+            >
+              {LANGUAGES.map((lang) => (
+                <MenuItem key={lang.code} value={lang.code}>
+                  {lang.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={closeNoDisceptDialog}>Cancel</Button>
-          <Button onClick={addLanguage} autoFocus>
+          <Button onClick={addLanguage} disabled={!addingLanguage} autoFocus>
             Add
           </Button>
         </DialogActions>
