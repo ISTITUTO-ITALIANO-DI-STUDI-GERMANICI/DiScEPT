@@ -7,58 +7,101 @@ import data from "../Data.js"; // Custom module to retrieve language-specific do
 import CETEIHelper from "../CETEIHelper.js"; // Helper for transforming TEI XML to HTML5
 
 // URL for backend API that performs text alignment
-const MAGIC_URL = "http://localhost:5000/align";
+const MAGIC_URL = process.env.REACT_APP_ALIGNMENT_URL || "https://bertalign-api-fpsfeeskyq-uc.a.run.app/align/tei";
 
 // AutomagicButton Component - Button to initiate alignment process between two languages
-export default function AutomagicButton({ languageA, languageB, ...props }) {
+export default function AutomagicButton({ languageA, languageB, onAlignmentComplete, ...props }) {
   // State to manage loading indicator during API request
   const [loading, setLoading] = React.useState(false);
 
   // Handles the button click, retrieves data, processes it, and makes an API request
   const click = async () => {
-    const obj = { a: null, b: null }; // Object to store transformed language data for alignment
-
-    // Retrieve and transform document for languageA using CETEIHelper
-    const a = CETEIHelper.CETEI.makeHTML5(
-      data.getDocumentPerLanguage(languageA), // Retrieve document based on languageA
-      null,
-      (domElm, teiElm) => (obj.a = { domElm, teiElm }), // Callback to store relevant elements in obj
-    )
-      .getElementsByTagName("tei-body")[0] // Get main content body of the document
-      .textContent.trim(); // Extract and trim text content
-
-    // Retrieve and transform document for languageB similarly
-    const b = CETEIHelper.CETEI.makeHTML5(
-      data.getDocumentPerLanguage(languageB), // Retrieve document based on languageB
-      null,
-      (domElm, teiElm) => (obj.b = { domElm, teiElm }), // Callback to store relevant elements in obj
-    )
-      .getElementsByTagName("tei-body")[0] // Get main content body of the document
-      .textContent.trim(); // Extract and trim text content
-
     setLoading(true); // Set loading state to true to show loading spinner
 
-    // Perform POST request to alignment API
-    const response = await fetch(MAGIC_URL, {
-      method: "POST",
-      headers: {
-        Accept: "application/json", // Specify JSON response format
-        "Content-Type": "application/json", // Specify JSON request format
-      },
-      body: JSON.stringify({ a, b }), // Send language data as request body
-    }).then(
-      (r) => r.json(), // Parse response JSON
-      () => setLoading(false), // Reset loading on error
-    );
+    try {
+      // Prepare payload with full TEI XML documents
+      const payload = {
+        source_tei: data.getDocumentPerLanguage(languageA),
+        target_tei: data.getDocumentPerLanguage(languageB),
+        source_language: languageA,
+        target_language: languageB
+      };
 
-    if (!response) return; // If no response, exit function
+      // Perform POST request to alignment API
+      const response = await fetch(MAGIC_URL, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    // Process alignment response
-    for (const align of response) {
-      console.log(align); // Log each alignment result to the console (for debugging/verification)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.aligned_xml) {
+        // Parse the aligned XML to extract link information
+        const parser = new DOMParser();
+        const alignedDoc = parser.parseFromString(result.aligned_xml, "text/xml");
+        
+        // Extract the individual TEI documents from the teiCorpus
+        const teiDocs = alignedDoc.querySelectorAll("teiCorpus > TEI");
+        
+        // Update our local documents with the backend's aligned versions
+        teiDocs.forEach((teiDoc) => {
+          const langUsage = teiDoc.querySelector("profileDesc langUsage language");
+          if (langUsage) {
+            const language = langUsage.getAttribute("ident");
+            if (language === languageA || language === languageB) {
+              // Update the document in our data structure
+              data.updateDocumentPerLanguage(language, teiDoc.outerHTML);
+              console.log(`Updated ${language} document with backend-generated IDs`);
+            }
+          }
+        });
+        
+        // Extract links from standOff section
+        const links = alignedDoc.querySelectorAll("standOff linkGrp link");
+        
+        links.forEach((link) => {
+          const targets = link.getAttribute("target");
+          const category = link.getAttribute("type") || "Linguistic";
+          
+          if (targets) {
+            // Parse target attribute: "#id1 #id2" -> ["id1", "id2"]
+            const ids = targets.split(" ").map(id => id.replace("#", ""));
+            
+            console.log("Parsed alignment IDs:", ids);
+            
+            if (ids.length === 2) {
+              // Each link contains exactly 2 IDs: source and target
+              const sourceIds = [ids[0]];
+              const targetIds = [ids[1]];
+              
+              console.log("Source IDs:", sourceIds, "Target IDs:", targetIds);
+              
+              // Add alignment to data structure
+              data.addAlignment(languageA, languageB, sourceIds, targetIds, category);
+            } else {
+              console.warn("Unexpected number of IDs in alignment:", ids);
+            }
+          }
+        });
+
+        // Notify parent component that alignment is complete
+        if (onAlignmentComplete) {
+          onAlignmentComplete(result.alignment_count || links.length);
+        }
+      }
+    } catch (error) {
+      console.error("Alignment request failed:", error);
+    } finally {
+      setLoading(false); // Reset loading state to hide spinner
     }
-
-    setLoading(false); // Reset loading state to hide spinner
   };
 
   // Content component - displays either a spinner or text based on loading state
