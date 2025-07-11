@@ -1,3 +1,5 @@
+import CETEI from './CETEI.js';
+
 class CETEIHelper {
   #CETEI;
 

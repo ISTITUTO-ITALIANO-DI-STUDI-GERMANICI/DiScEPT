@@ -1065,3 +1065,5 @@ var CETEI = (function () {
 
   return CETEI;
 })();
+
+export default CETEI;
