@@ -48,7 +48,7 @@ router.post('/proxy', async (ctx) => {
     ctx.body = text;
   } catch (e) {
     ctx.status = 502;
-    ctx.body = `Errore di connessione al server finale: ${e.message}`;
+    ctx.body = `Failed to connect to upstream server: ${e.message}`;
   }
 });
 
