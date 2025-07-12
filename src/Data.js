@@ -798,8 +798,8 @@ class Data {
     this.#changed = false;
   }
 
-  async readFromExistDB(url, collection, user, password) {
-    const files = await listCollection(url, collection, user, password);
+  async readFromExistDB(url, collection, user, password, proxy) {
+    const files = await listCollection(url, collection, user, password, proxy);
     const parser = new DOMParser();
     const dom = parser.parseFromString(
       `<TEI xmlns="${TEI_NS}"><teiHeader/><standOff/></TEI>`,
@@ -807,19 +807,21 @@ class Data {
     );
 
     for (const name of files) {
-      const xml = await fetchFile(url, collection, name, user, password);
+      const xml = await fetchFile(url, collection, name, user, password, proxy);
       const fileDom = parser.parseFromString(xml, "text/xml");
       if (!fileDom.firstElementChild) continue;
-      dom.documentElement.appendChild(dom.importNode(fileDom.documentElement, true));
+      dom.documentElement.appendChild(
+        dom.importNode(fileDom.documentElement, true),
+      );
     }
 
     const s = new XMLSerializer();
     this.readFromString(s.serializeToString(dom));
   }
 
-  async saveToExistDB(url, collection, user, password) {
+  async saveToExistDB(url, collection, user, password, proxy) {
     const xml = this.generateTEI();
-    await writeFile(url, collection, "discept.xml", xml, user, password);
+    await writeFile(url, collection, "discept.xml", xml, user, password, proxy);
     this.#changed = false;
   }
 
