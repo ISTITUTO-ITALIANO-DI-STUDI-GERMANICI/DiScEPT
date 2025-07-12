@@ -44,7 +44,11 @@ router.post('/proxy', async (ctx) => {
     const resp = await fetch(dest, options);
     const text = await resp.text();
     ctx.status = resp.status;
-    resp.headers.forEach((value, key) => ctx.set(key, value));
+    resp.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== 'content-encoding' && key.toLowerCase() !== 'content-length') {
+        ctx.set(key, value);
+      }
+    });
     ctx.body = text;
   } catch (e) {
     ctx.status = 502;
