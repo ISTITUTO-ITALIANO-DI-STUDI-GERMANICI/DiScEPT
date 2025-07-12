@@ -40,11 +40,16 @@ router.post('/proxy', async (ctx) => {
   if (body && method !== 'GET' && method !== 'HEAD') {
     options.body = body;
   }
-  const resp = await fetch(dest, options);
-  const text = await resp.text();
-  ctx.status = resp.status;
-  resp.headers.forEach((value, key) => ctx.set(key, value));
-  ctx.body = text;
+  try {
+    const resp = await fetch(dest, options);
+    const text = await resp.text();
+    ctx.status = resp.status;
+    resp.headers.forEach((value, key) => ctx.set(key, value));
+    ctx.body = text;
+  } catch (e) {
+    ctx.status = 502;
+    ctx.body = `Errore di connessione al server finale: ${e.message}`;
+  }
 });
 
 app.use(router.routes());
