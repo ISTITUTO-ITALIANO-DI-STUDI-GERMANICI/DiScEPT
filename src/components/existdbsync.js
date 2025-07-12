@@ -24,11 +24,15 @@ export default function ExistDBSync() {
     localStorage.getItem("exist-user") || "",
   );
   const [password, setPassword] = React.useState("");
+  const [proxy, setProxy] = React.useState(
+    localStorage.getItem("exist-proxy") || "",
+  );
 
   const savePrefs = () => {
     localStorage.setItem("exist-url", url);
     localStorage.setItem("exist-collection", collection);
     localStorage.setItem("exist-user", user);
+    localStorage.setItem("exist-proxy", proxy);
   };
 
   const showError = (err) => {
@@ -44,7 +48,7 @@ export default function ExistDBSync() {
   const load = async () => {
     savePrefs();
     try {
-      await data.readFromExistDB(url, collection, user, password);
+      await data.readFromExistDB(url, collection, user, password, proxy);
       setOpen(false);
     } catch (e) {
       showError(e);
@@ -54,7 +58,7 @@ export default function ExistDBSync() {
   const save = async () => {
     savePrefs();
     try {
-      await data.saveToExistDB(url, collection, user, password);
+      await data.saveToExistDB(url, collection, user, password, proxy);
       setOpen(false);
     } catch (e) {
       showError(e);
@@ -96,6 +100,12 @@ export default function ExistDBSync() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="Proxy URL (optional)"
+            value={proxy}
+            onChange={(e) => setProxy(e.target.value)}
             fullWidth
           />
         </DialogContent>
