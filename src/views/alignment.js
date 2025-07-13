@@ -162,6 +162,14 @@ class AlignmentView extends React.Component {
         data.getDocumentPerLanguage(language),
         "text/xml",
       );
+      
+      // Check for parser errors
+      const parseError = dom.querySelector("parsererror");
+      if (parseError) {
+        console.error(`XML parsing failed: ${parseError.textContent}`);
+        return;
+      }
+      
       if (tokenizeInternal(dom.firstElementChild)) {
         data.updateDocumentPerLanguage(language, dom.firstElementChild.outerHTML);
         if (id === "tabA") {
@@ -301,24 +309,24 @@ class AlignmentView extends React.Component {
     };
 
     const showAlignment = (index) => {
-      const alignments = data.getAlignments(
+      const a = data.getAlignments(
         this.state.tabALanguage,
         this.state.tabBLanguage,
       );
-      if (!alignments || index >= alignments.length) {
+      if (!a) {
         return;
       }
 
-      // Show only the specific alignment at the given index
-      const alignment = alignments[index];
-      alignment.a
-        .map((id) => document.getElementById(id))
-        .filter((elm) => elm)
-        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
-      alignment.b
-        .map((id) => document.getElementById(id))
-        .filter((elm) => elm)
-        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+      a.forEach((obj) => {
+        obj.a
+          .map((id) => document.getElementById(id))
+          .filter((elm) => elm)
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+        obj.b
+          .map((id) => document.getElementById(id))
+          .filter((elm) => elm)
+          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+      });
     };
 
     const hideAlignment = (index) => {
@@ -396,16 +404,6 @@ class AlignmentView extends React.Component {
                   id="auto-align"
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
-                  onAlignmentComplete={(count) => {
-                    // Use setTimeout to avoid state update during render
-                    setTimeout(() => {
-                      this.setState({ 
-                        listRefreshNeeded: this.state.listRefreshNeeded + 1,
-                        tabARefreshNeeded: this.state.tabARefreshNeeded + 1,
-                        tabBRefreshNeeded: this.state.tabBRefreshNeeded + 1
-                      });
-                    }, 0);
-                  }}
                 >
                   AI alignment
                 </AutomagicButton>
