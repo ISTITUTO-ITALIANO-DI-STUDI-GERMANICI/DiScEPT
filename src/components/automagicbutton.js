@@ -37,6 +37,8 @@ export default function AutomagicButton({ languageA, languageB, onAlignmentCompl
         body: JSON.stringify(payload),
       });
 
+      // TODO: authorization header when available
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -74,7 +76,7 @@ export default function AutomagicButton({ languageA, languageB, onAlignmentCompl
 
         links.forEach((link) => {
           const targets = link.getAttribute("target");
-          const category = link.getAttribute("type") || "Linguistic";
+          const category = link.getAttribute("type") || data.ALIGNMENT_CATEGORIES[0]; // Default to first category if not specified
 
           if (targets) {
             // Parse target attribute: "#id1 #id2" -> ["id1", "id2"]
