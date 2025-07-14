@@ -162,14 +162,6 @@ class AlignmentView extends React.Component {
         data.getDocumentPerLanguage(language),
         "text/xml",
       );
-      
-      // Check for parser errors
-      const parseError = dom.querySelector("parsererror");
-      if (parseError) {
-        console.error(`XML parsing failed: ${parseError.textContent}`);
-        return;
-      }
-      
       if (tokenizeInternal(dom.firstElementChild)) {
         data.updateDocumentPerLanguage(language, dom.firstElementChild.outerHTML);
         if (id === "tabA") {
