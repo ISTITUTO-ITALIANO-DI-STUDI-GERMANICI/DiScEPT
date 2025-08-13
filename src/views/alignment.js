@@ -301,24 +301,24 @@ class AlignmentView extends React.Component {
     };
 
     const showAlignment = (index) => {
-      const a = data.getAlignments(
+      const alignments = data.getAlignments(
         this.state.tabALanguage,
         this.state.tabBLanguage,
       );
-      if (!a) {
+      if (!alignments || !alignments[index]) {
         return;
       }
 
-      a.forEach((obj) => {
-        obj.a
-          .map((id) => document.getElementById(id))
-          .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
-        obj.b
-          .map((id) => document.getElementById(id))
-          .filter((elm) => elm)
-          .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
-      });
+      // Only highlight the specific alignment at the given index
+      const alignment = alignments[index];
+      alignment.a
+        .map((id) => document.getElementById(id))
+        .filter((elm) => elm)
+        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+      alignment.b
+        .map((id) => document.getElementById(id))
+        .filter((elm) => elm)
+        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
     };
 
     const hideAlignment = (index) => {
@@ -396,6 +396,9 @@ class AlignmentView extends React.Component {
                   id="auto-align"
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
+                  onAlignmentComplete={() => {
+                    this.setState({ listRefreshNeeded: this.state.listRefreshNeeded + 1 });
+                  }}
                 >
                   AI alignment
                 </AutomagicButton>
