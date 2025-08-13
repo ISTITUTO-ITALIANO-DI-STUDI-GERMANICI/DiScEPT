@@ -7,7 +7,8 @@ import data from "../Data.js"; // Custom module to retrieve language-specific do
 import CETEIHelper from "../CETEIHelper.js"; // Helper for transforming TEI XML to HTML5
 
 // URL for backend API that performs text alignment
-const MAGIC_URL = process.env.REACT_APP_ALIGNMENT_URL || "https://bertalign-api-fpsfeeskyq-uc.a.run.app/align/tei";
+const MAGIC_URL =
+  process.env.REACT_APP_ALIGNMENT_URL || "https://bertalign-api-fpsfeeskyq-uc.a.run.app/align/tei";
 
 // AutomagicButton Component - Button to initiate alignment process between two languages
 export default function AutomagicButton({ languageA, languageB, onAlignmentComplete, ...props }) {
@@ -24,7 +25,7 @@ export default function AutomagicButton({ languageA, languageB, onAlignmentCompl
         languageA: data.getDocumentPerLanguage(languageA),
         languageB: data.getDocumentPerLanguage(languageB),
         languageA_name: languageA,
-        languageB_name: languageB
+        languageB_name: languageB,
       };
 
       // Perform POST request to alignment API
@@ -49,13 +50,11 @@ export default function AutomagicButton({ languageA, languageB, onAlignmentCompl
         // Parse the aligned XML to extract link information
         const parser = new DOMParser();
         const alignedDoc = parser.parseFromString(result.aligned_xml, "text/xml");
-        
         // Check for parser errors - DOMParser doesn't throw exceptions but creates parsererror elements
         const parseError = alignedDoc.querySelector("parsererror");
         if (parseError) {
           throw new Error(`XML parsing failed: ${parseError.textContent}`);
         }
-  
         // Extract the individual TEI documents from the teiCorpus
         const teiDocs = alignedDoc.querySelectorAll("teiCorpus > TEI");
 
@@ -71,33 +70,54 @@ export default function AutomagicButton({ languageA, languageB, onAlignmentCompl
           }
         });
 
+        // Extract join elements that group segments together
+        const joins = {};
+        alignedDoc.querySelectorAll("standOff join").forEach((join) => {
+          const joinId = join.getAttribute("xml:id");
+          const targets = join.getAttribute("target");
+          if (joinId && targets) {
+            // Parse targets and remove # prefix
+            joins[joinId] = targets.split(" ").map((id) => id.replace("#", ""));
+          }
+        });
+
         // Extract links from standOff section
         const links = alignedDoc.querySelectorAll("standOff linkGrp link");
 
-        links.forEach((link) => {
+        links.forEach((link, index) => {
           const targets = link.getAttribute("target");
           const category = link.getAttribute("type") || data.ALIGNMENT_CATEGORIES[0]; // Default to first category if not specified
 
           if (targets) {
-            // Parse target attribute: "#id1 #id2" -> ["id1", "id2"]
-            const ids = targets.split(" ").map(id => id.replace("#", ""));
+            // Parse target attribute: "#id1 #id2" or "#joinId #id2" -> ["id1", "id2"] or ["joinId", "id2"]
+            const targetRefs = targets.split(" ").map((id) => id.replace("#", ""));
 
-            if (ids.length === 2) {
-              // Each link contains exactly 2 IDs: source and target
-              const sourceIds = [ids[0]];
-              const targetIds = [ids[1]];
+            if (targetRefs.length === 2) {
+              // Resolve joins to actual segment IDs
+              const sourceIds = joins[targetRefs[0]] || [targetRefs[0]];
+              const targetIds = joins[targetRefs[1]] || [targetRefs[1]];
 
               // Add alignment to data structure
               data.addAlignment(languageA, languageB, sourceIds, targetIds, category);
             } else {
-              console.warn("Unexpected number of IDs in alignment:", ids);
+              console.warn("Unexpected number of IDs in alignment:", targetRefs);
             }
           }
         });
 
+        // Dispatch custom event to refresh tabs with updated documents
+        window.dispatchEvent(
+          new CustomEvent("alignmentDocumentsUpdated", {
+            detail: {
+              languages: [languageA, languageB],
+              alignmentCount: result.alignment_count || links.length,
+            },
+          })
+        );
+
         // Notify parent component that alignment is complete
         if (onAlignmentComplete) {
-          onAlignmentComplete(result.alignment_count || links.length);
+          onAlignmentComplete();
         }
       }
     } catch (error) {
