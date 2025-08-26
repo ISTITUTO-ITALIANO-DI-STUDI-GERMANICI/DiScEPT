@@ -11,7 +11,7 @@ const MAGIC_URL =
   process.env.REACT_APP_ALIGNMENT_URL || "https://bertalign-api-fpsfeeskyq-uc.a.run.app/align/tei";
 
 // AutomagicButton Component - Button to initiate alignment process between two languages
-export default function AutomagicButton({ languageA, languageB, onAlignmentComplete, ...props }) {
+export default function AutomagicButton({ languageA, languageB, onAlignmentUpdated, ...props }) {
   // State to manage loading indicator during API request
   const [loading, setLoading] = React.useState(false);
 
@@ -105,19 +105,9 @@ export default function AutomagicButton({ languageA, languageB, onAlignmentCompl
           }
         });
 
-        // Dispatch custom event to refresh tabs with updated documents
-        window.dispatchEvent(
-          new CustomEvent("alignmentDocumentsUpdated", {
-            detail: {
-              languages: [languageA, languageB],
-              alignmentCount: result.alignment_count || links.length,
-            },
-          })
-        );
-
-        // Notify parent component that alignment is complete
-        if (onAlignmentComplete) {
-          onAlignmentComplete();
+        // Notify parent about updated alignment documents
+        if (onAlignmentUpdated) {
+          onAlignmentUpdated([languageA, languageB]);
         }
       }
     } catch (error) {

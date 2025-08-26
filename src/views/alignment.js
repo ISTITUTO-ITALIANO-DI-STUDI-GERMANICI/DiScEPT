@@ -34,6 +34,7 @@ class AlignmentView extends React.Component {
       tabBRefreshNeeded: 0,
       listRefreshNeeded: 0,
       category: ALIGNMENT_CATEGORIES[0],
+      alignmentUpdated: [],  // Track updated languages
     };
 
     this.tabAref = React.createRef();
@@ -352,6 +353,7 @@ class AlignmentView extends React.Component {
                   <AlignTab
                     id="tabA"
                     ref={this.tabAref}
+                    alignmentUpdated={this.state.alignmentUpdated}
                     onLanguageChanged={(language) =>
                       languageChanged("tabA", language)
                     }
@@ -371,6 +373,7 @@ class AlignmentView extends React.Component {
                   <AlignTab
                     id="tabB"
                     ref={this.tabBref}
+                    alignmentUpdated={this.state.alignmentUpdated}
                     onLanguageChanged={(language) =>
                       languageChanged("tabB", language)
                     }
@@ -396,8 +399,11 @@ class AlignmentView extends React.Component {
                   id="auto-align"
                   languageA={this.state.tabALanguage}
                   languageB={this.state.tabBLanguage}
-                  onAlignmentComplete={() => {
-                    this.setState({ listRefreshNeeded: this.state.listRefreshNeeded + 1 });
+                  onAlignmentUpdated={(updatedLanguages) => {
+                    this.setState({
+                      listRefreshNeeded: this.state.listRefreshNeeded + 1,
+                      alignmentUpdated: updatedLanguages
+                    });
                   }}
                 >
                   AI alignment

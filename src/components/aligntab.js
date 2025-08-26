@@ -22,30 +22,6 @@ class AlignTab extends React.Component {
     this.state = { language: "", lastRefresh: 0 };
     // Reference to content container for dynamic updates
     this.contentRef = React.createRef();
-    // Bind event handler
-    this.handleAlignmentUpdate = this.handleAlignmentUpdate.bind(this);
-  }
-
-  componentDidMount() {
-    // Listen for alignment document updates
-    window.addEventListener("alignmentDocumentsUpdated", this.handleAlignmentUpdate);
-  }
-
-  componentWillUnmount() {
-    // Clean up event listener
-    window.removeEventListener("alignmentDocumentsUpdated", this.handleAlignmentUpdate);
-  }
-
-  handleAlignmentUpdate(event) {
-    // Refresh if this tab's language was updated
-    if (
-      event.detail &&
-      event.detail.languages &&
-      event.detail.languages.includes(this.state.language)
-    ) {
-      console.log(`Refreshing AlignTab for language: ${this.state.language}`);
-      this.refresh(this.state.language);
-    }
   }
 
   componentDidUpdate(prevProps) {
@@ -57,6 +33,13 @@ class AlignTab extends React.Component {
       this.state.language
     ) {
       this.setState({ lastRefresh: this.props.refreshNeeded });
+      this.refresh(this.state.language);
+    }
+
+    // Check if alignment documents were updated
+    if (this.props.alignmentUpdated !== prevProps.alignmentUpdated &&
+        this.state.language &&
+        this.props.alignmentUpdated?.includes(this.state.language)) {
       this.refresh(this.state.language);
     }
   }
