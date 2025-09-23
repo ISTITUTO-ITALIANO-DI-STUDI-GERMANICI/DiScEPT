@@ -24,6 +24,83 @@ class AlignTab extends React.Component {
     this.contentRef = React.createRef();
   }
 
+  componentDidUpdate(prevProps) {
+    // Check if a refresh is needed based on props change
+    if (
+      this.props.refreshNeeded !== prevProps.refreshNeeded &&
+      this.props.refreshNeeded !== this.state.lastRefresh &&
+      this.contentRef.current &&
+      this.state.language
+    ) {
+      this.setState({ lastRefresh: this.props.refreshNeeded });
+      this.refresh(this.state.language);
+    }
+
+    // Check if alignment documents were updated
+    if (this.props.alignmentUpdated !== prevProps.alignmentUpdated &&
+        this.state.language &&
+        this.props.alignmentUpdated?.includes(this.state.language)) {
+      this.refresh(this.state.language);
+    }
+  }
+
+  /**
+   * Refreshes the content based on the selected language.
+   * Clears existing content and re-generates it using CETEIHelper, with
+   * alignment logic applied to TEI elements.
+   *
+   * @param {string} language - The language code to load content for.
+   */
+  refresh = (language) => {
+    if (!this.contentRef.current) {
+      return;
+    }
+
+    this.contentRef.current.innerHTML = "";
+    this.contentRef.current.append(
+      CETEIHelper.CETEI.makeHTML5(data.getDocumentPerLanguage(language), null, (domElm, teiElm) =>
+        this.alignLogic(this.props.id, this.contentRef.current, domElm, teiElm)
+      )
+    );
+  };
+
+  /**
+   * Configures interactive logic for a TEI element.
+   * Sets click and hover events to change the appearance and behavior of TEI elements.
+   *
+   * @param {string} id - The unique identifier for the element.
+   * @param {HTMLElement} rootElm - The root element of the content.
+   * @param {HTMLElement} domElm - The DOM element being configured.
+   * @param {HTMLElement} teiElm - The TEI element related to domElm.
+   */
+  alignLogic = (id, rootElm, domElm, teiElm) => {
+    domElm.__teiElm = teiElm;
+
+    // Apply hover events only to TEI leaves (elements without TEI children)
+    if (teiElm.children.length > 0) {
+      return;
+    }
+
+    domElm.addEventListener("click", (e) => {
+      this.props.onSelectionChanged(domElm, teiElm, rootElm);
+      e.stopPropagation();
+    });
+
+    domElm.addEventListener("mouseenter", (e) => {
+      if (!domElm.classList.contains("selectedTEI")) {
+        domElm.classList.add("selectableTEI");
+      }
+      e.stopPropagation();
+    });
+
+    domElm.addEventListener("mouseleave", (e) => {
+      if (!domElm.classList.contains("selectedTEI")) {
+        domElm.classList.remove("selectableTEI");
+      }
+      e.stopPropagation();
+    });
+  };
+
   render() {
     /**
      * Handles language selection changes in the dropdown.
@@ -34,73 +111,8 @@ class AlignTab extends React.Component {
     const handleChange = (event) => {
       this.props.onLanguageChanged(event.target.value);
       this.setState({ language: event.target.value });
-      refresh(event.target.value);
+      this.refresh(event.target.value);
     };
-
-    /**
-     * Configures interactive logic for a TEI element.
-     * Sets click and hover events to change the appearance and behavior of TEI elements.
-     *
-     * @param {string} id - The unique identifier for the element.
-     * @param {HTMLElement} rootElm - The root element of the content.
-     * @param {HTMLElement} domElm - The DOM element being configured.
-     * @param {HTMLElement} teiElm - The TEI element related to domElm.
-     */
-    const alignLogic = (id, rootElm, domElm, teiElm) => {
-      domElm.__teiElm = teiElm;
-
-      // Apply hover events only to TEI leaves (elements without TEI children)
-      if (teiElm.children.length > 0) {
-        return;
-      }
-
-      domElm.addEventListener("click", (e) => {
-        this.props.onSelectionChanged(domElm, teiElm, rootElm);
-        e.stopPropagation();
-      });
-
-      domElm.addEventListener("mouseenter", (e) => {
-        if (!domElm.classList.contains("selectedTEI")) {
-          domElm.classList.add("selectableTEI");
-        }
-        e.stopPropagation();
-      });
-
-      domElm.addEventListener("mouseleave", (e) => {
-        if (!domElm.classList.contains("selectedTEI")) {
-          domElm.classList.remove("selectableTEI");
-        }
-        e.stopPropagation();
-      });
-    };
-
-    /**
-     * Refreshes the content based on the selected language.
-     * Clears existing content and re-generates it using CETEIHelper, with
-     * alignment logic applied to TEI elements.
-     *
-     * @param {string} language - The language code to load content for.
-     */
-    const refresh = (language) => {
-      this.contentRef.current.innerHTML = "";
-      this.contentRef.current.append(
-        CETEIHelper.CETEI.makeHTML5(
-          data.getDocumentPerLanguage(language),
-          null,
-          (domElm, teiElm) =>
-            alignLogic(this.props.id, this.contentRef.current, domElm, teiElm),
-        ),
-      );
-    };
-
-    // Check if a refresh is needed based on props and state
-    if (
-      this.props.refreshNeeded != this.state.lastRefresh &&
-      this.contentRef.current
-    ) {
-      this.setState({ lastRefresh: this.props.refreshNeeded });
-      refresh(this.state.language);
-    }
 
     return (
       <Box>
@@ -109,8 +121,7 @@ class AlignTab extends React.Component {
           disabled={
             data
               .getDocumentLanguages()
-              .filter((language) => language !== this.props.excludeLanguage)
-              .length === 0
+              .filter((language) => language !== this.props.excludeLanguage).length === 0
           }
         >
           <InputLabel id={this.props.id + "-label"}>Language</InputLabel>
@@ -125,10 +136,7 @@ class AlignTab extends React.Component {
               .getDocumentLanguages()
               .filter((language) => language !== this.props.excludeLanguage)
               .map((language) => (
-                <MenuItem
-                  value={language}
-                  key={this.props.id + "-key-" + language}
-                >
+                <MenuItem value={language} key={this.props.id + "-key-" + language}>
                   {language}
                 </MenuItem>
               ))}
@@ -144,25 +152,13 @@ class AlignTab extends React.Component {
           >
             Tokenize selection
           </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={this.props.onTokenizeAll}
-          >
+          <Button size="small" variant="outlined" onClick={this.props.onTokenizeAll}>
             Tokenize all
           </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={this.props.onSelectAll}
-          >
+          <Button size="small" variant="outlined" onClick={this.props.onSelectAll}>
             Select all
           </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={this.props.onDeselectAll}
-          >
+          <Button size="small" variant="outlined" onClick={this.props.onDeselectAll}>
             Deselect all
           </Button>
         </Box>
