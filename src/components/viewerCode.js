@@ -23,17 +23,75 @@ const getCoreUtilities = () => {
         return lang.substring(0, 2);
       },
       extractTextElements(tei) {
-        const allElements = Array.from(tei.querySelectorAll("text p, text date, text head"));
         const validElements = [];
 
-        allElements.forEach((element) => {
-          const text = element.textContent.trim();
-          if (!text) return;
+        // Get all paragraph-level elements
+        const paragraphs = Array.from(tei.querySelectorAll("text p"));
+        const heads = Array.from(tei.querySelectorAll("text head"));
+        const dates = Array.from(tei.querySelectorAll("text date"));
 
-          // Include all elements for now to avoid missing content
-          // TODO: Implement smarter deduplication that handles mixed structures
-          validElements.push(element);
+        // Process heads and dates first (they might contain segments too)
+        [...heads, ...dates].forEach(element => {
+          const segments = element.querySelectorAll("seg");
+          if (segments.length > 0) {
+            // If element contains segments, extract them individually
+            segments.forEach(seg => {
+              if (seg.textContent.trim()) {
+                validElements.push({
+                  element: seg,
+                  type: 'segment',
+                  parent: element.tagName.toLowerCase()
+                });
+              }
+            });
+          } else if (element.getAttribute("xml:id")) {
+            // Element itself has an ID and should be aligned as a whole
+            if (element.textContent.trim()) {
+              validElements.push({
+                element: element,
+                type: element.tagName.toLowerCase(),
+                parent: null
+              });
+            }
+          }
         });
+
+        // Process paragraphs
+        paragraphs.forEach(para => {
+          const segments = para.querySelectorAll("seg");
+
+          if (segments.length > 0) {
+            // Paragraph contains segments - extract each segment
+            segments.forEach(seg => {
+              if (seg.textContent.trim()) {
+                validElements.push({
+                  element: seg,
+                  type: 'segment',
+                  parent: 'p'
+                });
+              }
+            });
+          } else if (para.getAttribute("xml:id")) {
+            // Paragraph itself has an ID and should be aligned as a whole
+            if (para.textContent.trim()) {
+              validElements.push({
+                element: para,
+                type: 'p',
+                parent: null
+              });
+            }
+          } else {
+            // Paragraph has no ID and no segments - include for display but not alignment
+            if (para.textContent.trim()) {
+              validElements.push({
+                element: para,
+                type: 'p',
+                parent: null
+              });
+            }
+          }
+        });
+
         return validElements;
       },
       processAlignments(xml) {
@@ -45,19 +103,56 @@ const getCoreUtilities = () => {
           "rgba(94, 146, 120, 0.10)", "rgba(228, 220, 207, 0.20)",
           "rgba(46, 46, 46, 0.08)", "rgba(107, 107, 107, 0.05)"
         ];
+
         const linkMap = new Map();
         const colorMap = new Map();
+        const joinMap = new Map();
+
+        // First, process join elements that group multiple segments
+        const joins = Array.from(xml.querySelectorAll("standOff join"));
+        joins.forEach((join) => {
+          const joinId = join.getAttribute("xml:id");
+          const targets = join.getAttribute("target");
+          if (joinId && targets) {
+            const targetIds = targets.split(" ").map(s => s.replace("#", ""));
+            joinMap.set(joinId, targetIds);
+          }
+        });
+
+        // Process alignment links
         const links = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link"));
         links.forEach((link, idx) => {
           const targets = link.getAttribute("target");
           if (!targets) return;
+
           const [id1, id2] = targets.split(" ").map(s => s.replace("#", ""));
           const color = palette[idx % palette.length];
-          linkMap.set(id1, id2);
-          linkMap.set(id2, id1);
-          colorMap.set(id1, color);
-          colorMap.set(id2, color);
+
+          // Resolve join references to actual segment IDs
+          const resolveIds = (id) => {
+            if (joinMap.has(id)) {
+              return joinMap.get(id);
+            }
+            return [id];
+          };
+
+          const ids1 = resolveIds(id1);
+          const ids2 = resolveIds(id2);
+
+          // Create bidirectional mappings for all combinations
+          ids1.forEach(segId1 => {
+            ids2.forEach(segId2 => {
+              linkMap.set(segId1, segId2);
+              linkMap.set(segId2, segId1);
+            });
+            colorMap.set(segId1, color);
+          });
+
+          ids2.forEach(segId2 => {
+            colorMap.set(segId2, color);
+          });
         });
+
         return { linkMap, colorMap };
       },
       extractLanguageData(xml, colorMap) {
@@ -69,17 +164,21 @@ const getCoreUtilities = () => {
           if (!langKey) return;
           const textElements = this.extractTextElements(tei);
           const verses = [];
-          textElements.forEach((element, index) => {
+          textElements.forEach((item, index) => {
+            const element = item.element;
             const text = element.textContent.trim();
             const id = element.getAttribute("xml:id") || null;
             const color = id ? (colorMap.get(id) || "") : "";
             const isAligned = id ? colorMap.has(id) : false;
+
             verses.push({
               id: id || \`element-\${index + 1}\`,
               text,
               color,
               n: index + 1,
-              isAligned
+              isAligned,
+              elementType: item.type,
+              parent: item.parent
             });
           });
           langData[langKey] = verses;
@@ -93,6 +192,23 @@ const getCoreUtilities = () => {
 // Complete viewer code for embedding in standalone HTML
 export const getFullViewerCode = () => `
   ${getCoreUtilities()}
+
+// Constants for element types and styling
+const ELEMENT_TYPES = {
+  SEGMENT: 'segment',
+  PARAGRAPH: 'p',
+  HEAD: 'head',
+  DATE: 'date'
+};
+
+const CSS_CLASSES = {
+  SEGMENT_ALIGNED: 'segment aligned',
+  SEGMENT_UNALIGNED: 'segment unaligned',
+  VERSE_ALIGNED: 'verse aligned',
+  VERSE_UNALIGNED: 'verse unaligned',
+  PARAGRAPH_CONTAINER: 'paragraph-container'
+};
+
 class TEIAlignmentViewer extends HTMLElement {
   constructor() {
     super();
@@ -254,10 +370,7 @@ class TEIAlignmentViewer extends HTMLElement {
       .verse.aligned {
         cursor: pointer;
         border-left: 3px solid transparent;
-      }
-      .verse.aligned:hover {
-        transform: translateX(4px);
-        border-left-color: #5E9278;
+        transition: border-left-color 0.2s;
       }
       .verse.unaligned {
         opacity: 0.6;
@@ -265,12 +378,38 @@ class TEIAlignmentViewer extends HTMLElement {
         border-left: 3px solid #E4DCCF;
       }
       .verse.locked {
+        border-left-color: #5E9278;
         box-shadow: inset 0 0 0 2px #5E9278;
         background: rgba(94, 146, 120, 0.1);
       }
-      .verse.hovered {
-        box-shadow: 0 0 0 2px #5E9278;
-        background: rgba(94, 146, 120, 0.05);
+      /* Paragraph container for segments */
+      .paragraph-container {
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+        border-radius: 10px;
+        line-height: 1.8;
+        background: rgba(255, 255, 255, 0.3);
+      }
+      /* Segment styles - inline within paragraphs */
+      .segment {
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+        transition: all 0.2s;
+        color: #2E2E2E;
+        display: inline;
+        position: relative;
+      }
+      .segment.aligned {
+        cursor: pointer;
+        transition: background-color 0.2s, outline 0.2s;
+      }
+      .segment.unaligned {
+        opacity: 0.7;
+      }
+      .segment.locked {
+        background: rgba(94, 146, 120, 0.2) !important;
+        outline: 2px solid #5E9278;
+        outline-offset: 2px;
       }
       .aligned-count {
         font-size: 0.8rem;
@@ -304,48 +443,10 @@ class TEIAlignmentViewer extends HTMLElement {
 
     const wrapper = document.createElement("div");
 
-    // Look for title/author in nested TEI documents (skip wrapper TEI)
-    const nestedTEIs = xml.querySelectorAll("TEI > TEI");
-    let title = "Title";
-    let author = "Author";
-
-    // Try to find title/author from nested TEI documents first
-    for (const tei of nestedTEIs) {
-      const titleEl = tei.querySelector("teiHeader fileDesc titleStmt title") ||
-                      tei.querySelector("teiHeader titleStmt title") ||
-                      tei.querySelector("teiHeader title");
-      const authorEl = tei.querySelector("teiHeader fileDesc titleStmt author") ||
-                       tei.querySelector("teiHeader titleStmt author") ||
-                       tei.querySelector("teiHeader author");
-
-      if (titleEl && titleEl.textContent?.trim()) {
-        title = titleEl.textContent.trim();
-      }
-      if (authorEl && authorEl.textContent?.trim()) {
-        author = authorEl.textContent.trim();
-      }
-
-      // If we found both, break early
-      if (title !== "Title" && author !== "Author") break;
-    }
-
-    // Fallback to root TEI if nothing found in nested
-    if (title === "Title") {
-      const titleEl = xml.querySelector("teiHeader fileDesc titleStmt title") ||
-                      xml.querySelector("teiHeader titleStmt title") ||
-                      xml.querySelector("teiHeader title");
-      if (titleEl && titleEl.textContent?.trim()) {
-        title = titleEl.textContent.trim();
-      }
-    }
-    if (author === "Author") {
-      const authorEl = xml.querySelector("teiHeader fileDesc titleStmt author") ||
-                       xml.querySelector("teiHeader titleStmt author") ||
-                       xml.querySelector("teiHeader author");
-      if (authorEl && authorEl.textContent?.trim()) {
-        author = authorEl.textContent.trim();
-      }
-    }
+    // Extract title and author from first nested TEI document
+    const firstTEI = xml.querySelector("TEI > TEI");
+    const title = firstTEI?.querySelector("teiHeader fileDesc titleStmt title")?.textContent?.trim() || "Untitled";
+    const author = firstTEI?.querySelector("teiHeader fileDesc titleStmt author")?.textContent?.trim() || "Unknown Author";
 
     wrapper.innerHTML = \`
       <div class="header">
@@ -380,7 +481,7 @@ class TEIAlignmentViewer extends HTMLElement {
       const [id1, id2] = targets.split(" ").map(s => s.replace("#", ""));
 
       // Generate preview text for the link
-      const element1 = xml.querySelector(\`[xml\\\\:id="\${id1}"]\`);
+      const element1 = xml.querySelector(\`*[xml\\\\:id="\${id1}"]\`) || xml.getElementById(id1);
       let linkText = \`Alignment \${idx + 1}\`;
       if (element1) {
         const previewText = element1.textContent.trim().substring(0, 30);
@@ -401,43 +502,100 @@ class TEIAlignmentViewer extends HTMLElement {
     const cards = document.createElement("div");
     cards.className = "cards";
 
+    // Helper function to add interaction events to aligned elements (click-only)
+    const viewer = this; // Capture 'this' reference for use in nested functions
+    const addInteractionEvents = (element, id) => {
+      element.addEventListener("click", (event) => {
+        event.stopPropagation(); // Prevent event bubbling
+
+        if (viewer.locked.has(id)) {
+          // Unlock clicked element
+          viewer.locked.delete(id);
+          viewer.highlight(id, false);
+        } else {
+          // Clear all previous highlighting before locking new pair
+          viewer.clearAllHighlighting();
+          viewer.locked.add(id);
+          viewer.highlight(id, true);
+        }
+      });
+    };
+
+    // Helper function to create segment elements within paragraph containers
+    const createSegmentElement = (verseData, currentParagraph) => {
+      const { id, text, color, isAligned } = verseData;
+      const seg = document.createElement("span");
+      seg.className = isAligned ? CSS_CLASSES.SEGMENT_ALIGNED : CSS_CLASSES.SEGMENT_UNALIGNED;
+      seg.id = id;
+      seg.dataset.id = id;
+
+      if (color && isAligned) {
+        seg.style.backgroundColor = color;
+      }
+
+      seg.innerHTML = text;
+
+      if (isAligned) {
+        addInteractionEvents(seg, id);
+      }
+
+      currentParagraph.appendChild(seg);
+      return seg;
+    };
+
+    // Helper function to create block elements (paragraphs, heads, etc.)
+    const createBlockElement = (verseData) => {
+      const { id, text, color, n, isAligned } = verseData;
+      const div = document.createElement("div");
+      div.className = isAligned ? CSS_CLASSES.VERSE_ALIGNED : CSS_CLASSES.VERSE_UNALIGNED;
+      div.id = id;
+      div.dataset.id = id;
+
+      if (color && isAligned) {
+        div.style.backgroundColor = color;
+      }
+
+      div.innerHTML = \`<span class="verse-number">\${n}</span>\${text}\`;
+
+      if (isAligned) {
+        addInteractionEvents(div, id);
+      }
+
+      return div;
+    };
+
     const makeCard = (lang, verses, label) => {
       const card = document.createElement("div");
       card.className = "card";
       const alignedCount = verses.filter(v => v.isAligned).length;
       card.innerHTML = \`<h3>\${label} <span class="aligned-count">(\${alignedCount} of \${verses.length} aligned)</span></h3>\`;
 
-      verses.forEach(({ id, text, color, n, isAligned }) => {
-        const div = document.createElement("div");
-        div.className = isAligned ? "verse aligned" : "verse unaligned";
-        div.id = id;
-        div.dataset.id = id;
+      // State for tracking paragraph containers
+      let currentParagraph = null;
 
-        // Apply background color only if aligned
-        if (color && isAligned) {
-          div.style.backgroundColor = color;
+      verses.forEach((verseData, index) => {
+        const { elementType, parent } = verseData;
+        // Handle segment elements within paragraph containers
+        if (elementType === ELEMENT_TYPES.SEGMENT && parent === ELEMENT_TYPES.PARAGRAPH) {
+          // Create new paragraph container if needed
+          if (!currentParagraph || (index > 0 && verses[index - 1].parent !== ELEMENT_TYPES.PARAGRAPH)) {
+            currentParagraph = document.createElement("div");
+            currentParagraph.className = CSS_CLASSES.PARAGRAPH_CONTAINER;
+            card.appendChild(currentParagraph);
+          }
+
+          createSegmentElement(verseData, currentParagraph);
+
+          // Add space between consecutive segments
+          if (index < verses.length - 1 && verses[index + 1].parent === ELEMENT_TYPES.PARAGRAPH) {
+            currentParagraph.appendChild(document.createTextNode(" "));
+          }
+        } else {
+          // Handle block-level elements (paragraphs, heads, etc.)
+          currentParagraph = null; // Reset paragraph grouping
+          const blockElement = createBlockElement(verseData);
+          card.appendChild(blockElement);
         }
-
-        div.innerHTML = \`<span class="verse-number">\${n}</span>\${text}\`;
-
-        // Only add interaction events for aligned verses
-        if (isAligned) {
-          div.addEventListener("mouseenter", () => this.highlight(id, true));
-          div.addEventListener("mouseleave", () => {
-            if (!this.locked.has(id)) this.highlight(id, false);
-          });
-          div.addEventListener("click", () => {
-            if (this.locked.has(id)) {
-              this.locked.delete(id);
-              this.highlight(id, false);
-            } else {
-              this.locked.add(id);
-              this.highlight(id, true);
-            }
-          });
-        }
-
-        card.appendChild(div);
       });
       return card;
     };
@@ -480,6 +638,15 @@ class TEIAlignmentViewer extends HTMLElement {
     // }
   }
 
+  // Clear all highlighting from all elements
+  clearAllHighlighting() {
+    const allElements = this.shadowRoot.querySelectorAll('[data-id]');
+    allElements.forEach(element => {
+      // Remove locked class from all elements (we'll re-add to current selection)
+      element.classList.remove("locked");
+    });
+  }
+
   highlight(id, on) {
     const partnerId = this.linkMap.get(id);
     const verses = [];
@@ -493,17 +660,20 @@ class TEIAlignmentViewer extends HTMLElement {
       }
     });
 
-    verses.forEach(verse => verse.classList.toggle("hovered", on));
+    // Simply toggle locked state (no hover state needed)
     if (on) {
-      this.locked.has(id) && verses.forEach(v => v.classList.add("locked"));
+      verses.forEach(v => v.classList.add("locked"));
     } else {
-      this.locked.has(id) || verses.forEach(v => v.classList.remove("locked"));
+      verses.forEach(v => v.classList.remove("locked"));
     }
   }
 
   scrollToVerses(id) {
     const partnerId = this.linkMap.get(id);
     const targets = [];
+
+    // Clear all previous highlighting before highlighting new pair
+    this.clearAllHighlighting();
 
     // Find elements by ID individually to avoid CSS selector issues
     const element1 = this.shadowRoot.getElementById(id);
