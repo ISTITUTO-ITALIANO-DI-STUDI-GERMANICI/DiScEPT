@@ -1,0 +1,156 @@
+// Example of how final.js would be updated to use the template system
+import * as React from "react";
+import { useState } from "react";
+
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+
+import Title from '../components/title.js';
+import data from "../Data.js";
+import TEITemplateEngine from '../templates/template-engine.js';
+
+function FinalView() {
+  const [selectedTemplate, setSelectedTemplate] = useState('default');
+  const templateEngine = new TEITemplateEngine();
+  const availableTemplates = templateEngine.getAvailableTemplates();
+
+  function downloadTEI() {
+    let blob = new Blob([data.generateTEI()], { type: "octet/stream" });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "file.tei";
+    a.style.display = "none";
+    document.body.append(a);
+    a.click();
+  }
+
+  function showHTMLViewer() {
+    const teiContent = data.generateTEI();
+    const blob = new Blob([teiContent], { type: "text/xml" });
+    const blobURL = URL.createObjectURL(blob);
+    const viewerWindow = window.open("/wc/index.html", "_blank");
+    if (viewerWindow) {
+      setTimeout(() => {
+        viewerWindow.postMessage(
+          { type: "tei-content", blobURL: blobURL },
+          window.location.origin
+        );
+      }, 1000);
+    }
+  }
+
+  function downloadHTMLWithViewer() {
+    const teiContent = data.generateTEI();
+
+    // Extract metadata from TEI
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(teiContent, "application/xml");
+    const title = xml.querySelector("teiHeader fileDesc titleStmt title")?.textContent ||
+                  xml.querySelector("teiHeader titleStmt title")?.textContent ||
+                  xml.querySelector("teiHeader title")?.textContent || "TEI Document";
+    const author = xml.querySelector("teiHeader fileDesc titleStmt author")?.textContent ||
+                   xml.querySelector("teiHeader titleStmt author")?.textContent ||
+                   xml.querySelector("teiHeader author")?.textContent || "Unknown Author";
+
+    // Generate HTML using selected template
+    const html = templateEngine.generateHTML(selectedTemplate, {
+      title: title,
+      author: author,
+      teiContent: teiContent,
+      language: 'en'
+    });
+
+    // Download the generated HTML
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tei-viewer-${selectedTemplate}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // NEW: Template preview function
+  function previewTemplate(templateId) {
+    // Could open a preview window with sample content
+    console.log(`Previewing template: ${templateId}`);
+  }
+
+  return (
+    <div>
+      <Title>Final Steps</Title>
+
+      <Box sx={{ padding: 2 }}>
+        <h3>Download Options</h3>
+
+        {/* Existing TEI download */}
+        <Button variant="outlined" onClick={downloadTEI} sx={{ mr: 2, mb: 2 }}>
+          Download TEI File
+        </Button>
+
+        {/* Existing HTML viewer */}
+        <Button variant="outlined" onClick={showHTMLViewer} sx={{ mr: 2, mb: 2 }}>
+          Open HTML Viewer
+        </Button>
+
+        {/* NEW: Template selection section */}
+        <Box sx={{ mt: 3, mb: 2 }}>
+          <h4>HTML Export with Custom Design</h4>
+          <FormControl sx={{ minWidth: 200, mr: 2 }}>
+            <InputLabel>Template Theme</InputLabel>
+            <Select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              label="Template Theme"
+            >
+              {availableTemplates.map(template => (
+                <MenuItem key={template.id} value={template.id}>
+                  {template.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button
+            variant="text"
+            onClick={() => previewTemplate(selectedTemplate)}
+            sx={{ mr: 2 }}
+          >
+            Preview
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={downloadHTMLWithViewer}
+            color="primary"
+          >
+            Download HTML ({availableTemplates.find(t => t.id === selectedTemplate)?.name})
+          </Button>
+        </Box>
+
+        {/* Template description */}
+        {selectedTemplate && (
+          <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+            <strong>Template Description:</strong>
+            <p>{availableTemplates.find(t => t.id === selectedTemplate)?.description}</p>
+            <strong>Features:</strong>
+            <ul>
+              {Object.entries(availableTemplates.find(t => t.id === selectedTemplate)?.features || {})
+                .filter(([key, value]) => value)
+                .map(([key, value]) => (
+                  <li key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</li>
+                ))}
+            </ul>
+          </Box>
+        )}
+      </Box>
+    </div>
+  );
+}
+
+export default FinalView;
