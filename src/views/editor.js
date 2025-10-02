@@ -43,7 +43,7 @@ const documentTemplate = (
  <text>
   <body>
     <div>
-      <p> </p>
+      <p><!-- Write something here --></p>
     </div>
   </body>
  </text>
