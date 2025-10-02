@@ -42,7 +42,9 @@ const documentTemplate = (
  </teiHeader>
  <text>
   <body>
-    <!-- Write something here -->
+    <div>
+      <p><!-- Write something here --></p>
+    </div>
   </body>
  </text>
 </TEI>`;
