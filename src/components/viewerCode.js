@@ -1,192 +1,31 @@
 import { TEI_VIEWER_CORE } from './teiViewerCore.js';
 
+/**
+ * ✅ AUTO-GENERATED CODE - NO DUPLICATION
+ *
+ * This file automatically generates a stringified version of teiViewerCore.js
+ * using .toString() on the actual imported functions. No manual synchronization needed!
+ *
+ * The stringified code is embedded in standalone HTML files which cannot use ES6 imports.
+ */
+
 // Get the core utilities as a string for inlining
 const getCoreUtilities = () => {
-  // This will be the stringified version of TEI_VIEWER_CORE for standalone HTML
-  return `
-    const TEI_VIEWER_CORE = {
-      detectLanguage(langElement) {
-        if (!langElement) return null;
-        const lang = langElement.textContent?.toLowerCase() || langElement.getAttribute("ident")?.toLowerCase();
-        if (!lang) return null;
-        const languageMap = {
-          'it': ['it', 'ita', 'italiano', 'italian'],
-          'de': ['de', 'deu', 'deutsch', 'tedesco', 'german'],
-          'en': ['en', 'eng', 'english', 'inglese'],
-          'fr': ['fr', 'fra', 'francais', 'french']
-        };
-        for (const [key, variants] of Object.entries(languageMap)) {
-          if (variants.some(variant => lang.includes(variant))) {
-            return key;
-          }
-        }
-        return lang.substring(0, 2);
-      },
-      extractTextElements(tei) {
-        const validElements = [];
-
-        // Get all paragraph-level elements
-        const paragraphs = Array.from(tei.querySelectorAll("text p"));
-        const heads = Array.from(tei.querySelectorAll("text head"));
-        const dates = Array.from(tei.querySelectorAll("text date"));
-
-        // Process heads and dates first (they might contain segments too)
-        [...heads, ...dates].forEach(element => {
-          const segments = element.querySelectorAll("seg");
-          if (segments.length > 0) {
-            // If element contains segments, extract them individually
-            segments.forEach(seg => {
-              if (seg.textContent.trim()) {
-                validElements.push({
-                  element: seg,
-                  type: 'segment',
-                  parent: element.tagName.toLowerCase()
-                });
-              }
-            });
-          } else if (element.getAttribute("xml:id")) {
-            // Element itself has an ID and should be aligned as a whole
-            if (element.textContent.trim()) {
-              validElements.push({
-                element: element,
-                type: element.tagName.toLowerCase(),
-                parent: null
-              });
-            }
-          }
-        });
-
-        // Process paragraphs
-        paragraphs.forEach(para => {
-          const segments = para.querySelectorAll("seg");
-
-          if (segments.length > 0) {
-            // Paragraph contains segments - extract each segment
-            segments.forEach(seg => {
-              if (seg.textContent.trim()) {
-                validElements.push({
-                  element: seg,
-                  type: 'segment',
-                  parent: 'p'
-                });
-              }
-            });
-          } else if (para.getAttribute("xml:id")) {
-            // Paragraph itself has an ID and should be aligned as a whole
-            if (para.textContent.trim()) {
-              validElements.push({
-                element: para,
-                type: 'p',
-                parent: null
-              });
-            }
-          } else {
-            // Paragraph has no ID and no segments - include for display but not alignment
-            if (para.textContent.trim()) {
-              validElements.push({
-                element: para,
-                type: 'p',
-                parent: null
-              });
-            }
-          }
-        });
-
-        return validElements;
-      },
-      processAlignments(xml) {
-        const palette = [
-          "rgba(94, 146, 120, 0.15)", "rgba(228, 220, 207, 0.25)",
-          "rgba(94, 146, 120, 0.08)", "rgba(228, 220, 207, 0.15)",
-          "rgba(46, 46, 46, 0.05)", "rgba(107, 107, 107, 0.08)",
-          "rgba(94, 146, 120, 0.20)", "rgba(228, 220, 207, 0.30)",
-          "rgba(94, 146, 120, 0.10)", "rgba(228, 220, 207, 0.20)",
-          "rgba(46, 46, 46, 0.08)", "rgba(107, 107, 107, 0.05)"
-        ];
-
-        const linkMap = new Map();
-        const colorMap = new Map();
-        const joinMap = new Map();
-
-        // First, process join elements that group multiple segments
-        const joins = Array.from(xml.querySelectorAll("standOff join"));
-        joins.forEach((join) => {
-          const joinId = join.getAttribute("xml:id");
-          const targets = join.getAttribute("target");
-          if (joinId && targets) {
-            const targetIds = targets.split(" ").map(s => s.replace("#", ""));
-            joinMap.set(joinId, targetIds);
-          }
-        });
-
-        // Process alignment links
-        const links = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link"));
-        links.forEach((link, idx) => {
-          const targets = link.getAttribute("target");
-          if (!targets) return;
-
-          const [id1, id2] = targets.split(" ").map(s => s.replace("#", ""));
-          const color = palette[idx % palette.length];
-
-          // Resolve join references to actual segment IDs
-          const resolveIds = (id) => {
-            if (joinMap.has(id)) {
-              return joinMap.get(id);
-            }
-            return [id];
-          };
-
-          const ids1 = resolveIds(id1);
-          const ids2 = resolveIds(id2);
-
-          // Create bidirectional mappings for all combinations
-          ids1.forEach(segId1 => {
-            ids2.forEach(segId2 => {
-              linkMap.set(segId1, segId2);
-              linkMap.set(segId2, segId1);
-            });
-            colorMap.set(segId1, color);
-          });
-
-          ids2.forEach(segId2 => {
-            colorMap.set(segId2, color);
-          });
-        });
-
-        return { linkMap, colorMap };
-      },
-      extractLanguageData(xml, colorMap) {
-        const teis = xml.querySelectorAll("TEI > TEI");
-        const langData = {};
-        teis.forEach(tei => {
-          const langElement = tei.querySelector("language");
-          const langKey = this.detectLanguage(langElement);
-          if (!langKey) return;
-          const textElements = this.extractTextElements(tei);
-          const verses = [];
-          textElements.forEach((item, index) => {
-            const element = item.element;
-            const text = element.textContent.trim();
-            const id = element.getAttribute("xml:id") || null;
-            const color = id ? (colorMap.get(id) || "") : "";
-            const isAligned = id ? colorMap.has(id) : false;
-
-            verses.push({
-              id: id || \`element-\${index + 1}\`,
-              text,
-              color,
-              n: index + 1,
-              isAligned,
-              elementType: item.type,
-              parent: item.parent
-            });
-          });
-          langData[langKey] = verses;
-        });
-        return langData;
+  // Auto-generate stringified version from actual TEI_VIEWER_CORE object
+  const methods = Object.keys(TEI_VIEWER_CORE)
+    .map(key => {
+      if (typeof TEI_VIEWER_CORE[key] === 'function') {
+        const funcStr = TEI_VIEWER_CORE[key].toString();
+        return `  ${key}${funcStr.substring(funcStr.indexOf('('))}`;
       }
-    };
-  `;
+      return null;
+    })
+    .filter(Boolean)
+    .join(',\n\n');
+
+  return `const TEI_VIEWER_CORE = {
+${methods}
+};`;
 };
 
 // Complete viewer code for embedding in standalone HTML
@@ -625,17 +464,6 @@ class TEIAlignmentViewer extends HTMLElement {
 
     shadow.appendChild(style);
     shadow.appendChild(wrapper);
-
-    // Comment out toggle numbers functionality for now
-    // const toggleNumbersBtn = shadow.querySelector("#toggleNumbers");
-    // if (toggleNumbersBtn) {
-    //   toggleNumbersBtn.onclick = () => {
-    //     this.showNumbers = !this.showNumbers;
-    //     shadow.querySelectorAll(".card").forEach(card => {
-    //       card.classList.toggle("hide-numbers", !this.showNumbers);
-    //     });
-    //   };
-    // }
   }
 
   // Clear all highlighting from all elements
@@ -648,14 +476,18 @@ class TEIAlignmentViewer extends HTMLElement {
   }
 
   highlight(id, on) {
-    const partnerId = this.linkMap.get(id);
+    // Convert Set to Array for compatibility with existing code
+    const partners = this.linkMap.get(id);
+    const partnerIds = partners ? Array.from(partners) : [];
     const verses = [];
 
     // Find elements by data-id individually to avoid CSS selector issues
     const allVerses = this.shadowRoot.querySelectorAll('[data-id]');
     allVerses.forEach(verse => {
       const dataId = verse.getAttribute('data-id');
-      if (dataId === id || dataId === partnerId) {
+      // Check if this is the clicked element or any of its partners
+      // Using Set.has() would be O(1) but we already converted to array for other operations
+      if (dataId === id || partnerIds.includes(dataId)) {
         verses.push(verse);
       }
     });
@@ -669,24 +501,57 @@ class TEIAlignmentViewer extends HTMLElement {
   }
 
   scrollToVerses(id) {
-    const partnerId = this.linkMap.get(id);
+    // Convert Set to Array for compatibility with existing code
+    const partners = this.linkMap.get(id);
+    const partnerIds = partners ? Array.from(partners) : [];
     const targets = [];
 
     // Clear all previous highlighting before highlighting new pair
     this.clearAllHighlighting();
 
-    // Find elements by ID individually to avoid CSS selector issues
-    const element1 = this.shadowRoot.getElementById(id);
-    const element2 = partnerId ? this.shadowRoot.getElementById(partnerId) : null;
+    // For join IDs, we need to find the actual segment elements
+    // The partnerIds array contains the resolved segment IDs
+    if (partnerIds.length > 0) {
+      // Highlight using the first segment ID in the join's partner list
+      // This will trigger highlighting of all connected segments
+      const firstSegmentId = partnerIds[0];
 
-    if (element1) targets.push(element1);
-    if (element2) targets.push(element2);
+      // Collect all elements to scroll to
+      const allIds = [id, ...partnerIds];
+      allIds.forEach(elementId => {
+        const element = this.shadowRoot.getElementById(elementId);
+        if (element) targets.push(element);
+      });
 
-    targets.forEach(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
-    this.highlight(id, true);
-    setTimeout(() => {
-      if (!this.locked.has(id)) this.highlight(id, false);
-    }, 2000);
+      // Scroll to targets
+      if (targets.length > 0) {
+        targets[0].scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      // Highlight using first actual segment ID so all partners get highlighted
+      this.highlight(firstSegmentId, true);
+      setTimeout(() => {
+        if (!this.locked.has(firstSegmentId)) this.highlight(firstSegmentId, false);
+      }, 2000);
+    } else {
+      // Regular element (not a join)
+      const element = this.shadowRoot.getElementById(id);
+      if (element) {
+        targets.push(element);
+
+        // Find all partner elements
+        partnerIds.forEach(partnerId => {
+          const partnerElement = this.shadowRoot.getElementById(partnerId);
+          if (partnerElement) targets.push(partnerElement);
+        });
+
+        targets.forEach(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+        this.highlight(id, true);
+        setTimeout(() => {
+          if (!this.locked.has(id)) this.highlight(id, false);
+        }, 2000);
+      }
+    }
   }
 }
 

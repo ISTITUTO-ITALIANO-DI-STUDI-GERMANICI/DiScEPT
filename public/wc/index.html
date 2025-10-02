@@ -295,10 +295,24 @@ const palette = [
 
         const links = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link"));
         links.forEach((link, idx) => {
-          const [id1, id2] = link.getAttribute("target").split(" ").map(s => s.replace("#", ""));
+          const targets = link.getAttribute("target").split(" ").map(s => s.replace("#", ""));
+          if (targets.length < 2) return;
+
+          const [id1, id2] = targets;
           const color = palette[idx % palette.length];
-          this.linkMap.set(id1, id2);
-          this.linkMap.set(id2, id1);
+
+          // Note: Standalone viewer doesn't support join elements
+          // For full join support, use the exported HTML viewer
+          if (!this.linkMap.has(id1)) this.linkMap.set(id1, []);
+          if (!this.linkMap.has(id2)) this.linkMap.set(id2, []);
+
+          if (!this.linkMap.get(id1).includes(id2)) {
+            this.linkMap.get(id1).push(id2);
+          }
+          if (!this.linkMap.get(id2).includes(id1)) {
+            this.linkMap.get(id2).push(id1);
+          }
+
           this.colorMap.set(id1, color);
           this.colorMap.set(id2, color);
         });
@@ -314,34 +328,56 @@ const palette = [
           const lang = langElement.textContent?.toLowerCase() || langElement.getAttribute("ident")?.toLowerCase();
           if (!lang) return;
 
-          // Look for ALL text content elements (paragraphs, dates, etc.) in the text body
-          const allElements = tei.querySelectorAll("text p, text date, text head");
+          // Look for ALL text content elements using universal TEI element support
+          const allElements = Array.from(tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note"));
           const verses = [];
           let elementIndex = 0;
 
           allElements.forEach((element) => {
-            const text = element.textContent.trim();
-            if (!text) return;
+            // Check if element contains segments
+            const segments = element.querySelectorAll("seg");
 
-            // Skip if this element is contained within another element we're already processing
-            const hasParentInList = Array.from(allElements).some(other =>
-              other !== element && other.contains(element)
-            );
-            if (hasParentInList) return;
+            if (segments.length > 0) {
+              // Element contains segments - extract each segment individually
+              segments.forEach(seg => {
+                const text = seg.textContent.trim();
+                if (!text) return;
 
-            const id = element.getAttribute("xml:id") || null;
+                const id = seg.getAttribute("xml:id");
+                const color = id ? (this.colorMap.get(id) || "") : "";
+                const isAligned = id ? this.colorMap.has(id) : false;
 
-            // Get color if aligned, or empty string if not aligned
-            const color = id ? (this.colorMap.get(id) || "") : "";
-            const isAligned = id ? this.colorMap.has(id) : false;
+                verses.push({
+                  id: id || `element-${++elementIndex}`,
+                  text,
+                  color,
+                  n: elementIndex,
+                  isAligned
+                });
+              });
+            } else {
+              // Element-level alignment (no segments)
+              const text = element.textContent.trim();
+              if (!text) return;
 
-            verses.push({
-              id: id || `element-${++elementIndex}`, // Generate ID for elements without one
-              text,
-              color,
-              n: elementIndex,
-              isAligned
-            });
+              // Skip if this element is contained within another element we're already processing
+              const hasParentInList = allElements.some(other =>
+                other !== element && other.contains(element)
+              );
+              if (hasParentInList) return;
+
+              const id = element.getAttribute("xml:id") || null;
+              const color = id ? (this.colorMap.get(id) || "") : "";
+              const isAligned = id ? this.colorMap.has(id) : false;
+
+              verses.push({
+                id: id || `element-${++elementIndex}`,
+                text,
+                color,
+                n: elementIndex,
+                isAligned
+              });
+            }
           });
 
           // Store by language code or full name
@@ -460,14 +496,15 @@ const palette = [
       }
 
       highlight(id, on) {
-        const partnerId = this.linkMap.get(id);
+        const partnerIds = this.linkMap.get(id) || [];
         const verses = [];
 
         // Find elements by data-id individually to avoid CSS selector issues
         const allVerses = this.shadowRoot.querySelectorAll('[data-id]');
         allVerses.forEach(verse => {
           const dataId = verse.getAttribute('data-id');
-          if (dataId === id || dataId === partnerId) {
+          // Check if this is the clicked element or any of its partners
+          if (dataId === id || partnerIds.includes(dataId)) {
             verses.push(verse);
           }
         });
@@ -481,15 +518,18 @@ const palette = [
       }
 
       scrollToVerses(id) {
-        const partnerId = this.linkMap.get(id);
+        const partnerIds = this.linkMap.get(id) || [];
         const targets = [];
 
-        // Find elements by ID individually to avoid CSS selector issues
-        const element1 = this.shadowRoot.getElementById(id);
-        const element2 = partnerId ? this.shadowRoot.getElementById(partnerId) : null;
+        // Find clicked element
+        const element = this.shadowRoot.getElementById(id);
+        if (element) targets.push(element);
 
-        if (element1) targets.push(element1);
-        if (element2) targets.push(element2);
+        // Find all partner elements
+        partnerIds.forEach(partnerId => {
+          const partnerElement = this.shadowRoot.getElementById(partnerId);
+          if (partnerElement) targets.push(partnerElement);
+        });
 
         targets.forEach(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
         this.highlight(id, true);

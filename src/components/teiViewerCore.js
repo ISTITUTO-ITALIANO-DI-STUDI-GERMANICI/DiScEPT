@@ -26,23 +26,25 @@ export const TEI_VIEWER_CORE = {
   },
 
   /**
-   * Extract text elements maintaining paragraph structure with segments
+   * Extract text elements maintaining structure with segments
    *
-   * This function processes TEI documents that may contain either:
-   * - Paragraph-level alignments (traditional approach)
-   * - Segment-level alignments (AI-generated fine-grained alignments)
-   * - Mixed structures with both paragraphs and segments
+   * Universal extraction supporting multiple TEI text-bearing elements:
+   * - Poetry: <l> (line), <lg> (line group)
+   * - Prose: <p> (paragraph), <ab> (anonymous block)
+   * - Drama: <sp> (speech), <stage>
+   * - Structure: <head>, <date>, <trailer>, <quote>, <note>
+   *
+   * Handles both element-level and segment-level alignments:
+   * - Element-level: <l xml:id="...">text</l>
+   * - Segment-level: <l><seg xml:id="...">text</seg></l>
    *
    * @param {Document} tei - TEI document to process
    * @returns {Array<Object>} Array of element objects with structure:
    *   {
    *     element: DOMElement,     // The actual DOM element
-   *     type: string,           // 'segment', 'p', 'head', 'date'
+   *     type: string,           // 'segment', 'l', 'p', 'ab', 'head', etc.
    *     parent: string|null     // Parent element type for hierarchy
    *   }
-   *
-   * TODO: This approach handles both paragraph-level and segment-level alignments
-   * but may need refinement for complex nested structures or performance optimization
    */
   extractTextElements(tei) {
     if (!tei || typeof tei.querySelectorAll !== 'function') {
@@ -51,16 +53,20 @@ export const TEI_VIEWER_CORE = {
     }
     const validElements = [];
 
-    // Get all paragraph-level elements
-    const paragraphs = Array.from(tei.querySelectorAll("text p"));
-    const heads = Array.from(tei.querySelectorAll("text head"));
-    const dates = Array.from(tei.querySelectorAll("text date"));
+    // Query all common TEI text-bearing elements in a single selector
+    // This preserves document order (important for heads before lines, etc.)
+    // Supports: Poetry (<l>), Prose (<p>, <ab>), Drama (<sp>, <stage>),
+    // and Structural elements (<head>, <date>, <trailer>, <quote>, <note>)
+    const allElements = Array.from(
+      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note")
+    );
 
-    // Process heads and dates first (they might contain segments too)
-    [...heads, ...dates].forEach(element => {
+    // Helper function to process any text-bearing element
+    const processElement = (element) => {
       const segments = element.querySelectorAll("seg");
+
       if (segments.length > 0) {
-        // If element contains segments, extract them individually
+        // Element contains segments - extract them individually
         segments.forEach(seg => {
           if (seg.textContent.trim()) {
             validElements.push({
@@ -79,44 +85,20 @@ export const TEI_VIEWER_CORE = {
             parent: null
           });
         }
-      }
-    });
-
-    // Process paragraphs
-    paragraphs.forEach(para => {
-      const segments = para.querySelectorAll("seg");
-
-      if (segments.length > 0) {
-        // Paragraph contains segments - extract each segment
-        segments.forEach(seg => {
-          if (seg.textContent.trim()) {
-            validElements.push({
-              element: seg,
-              type: 'segment',
-              parent: 'p'
-            });
-          }
-        });
-      } else if (para.getAttribute("xml:id")) {
-        // Paragraph itself has an ID and should be aligned as a whole
-        if (para.textContent.trim()) {
-          validElements.push({
-            element: para,
-            type: 'p',
-            parent: null
-          });
-        }
       } else {
-        // Paragraph has no ID and no segments - include for display but not alignment
-        if (para.textContent.trim()) {
+        // Element has no ID and no segments - include for display but not alignment
+        if (element.textContent.trim()) {
           validElements.push({
-            element: para,
-            type: 'p',
+            element: element,
+            type: element.tagName.toLowerCase(),
             parent: null
           });
         }
       }
-    });
+    };
+
+    // Process all elements in document order
+    allElements.forEach(processElement);
 
     return validElements;
   },
@@ -137,7 +119,8 @@ export const TEI_VIEWER_CORE = {
       "rgba(46, 46, 46, 0.08)",     "rgba(107, 107, 107, 0.05)"
     ];
 
-    const linkMap = new Map();
+    // Use Sets for O(1) add/has operations instead of arrays with O(n) includes()
+    const linkMap = new Map();  // Map<string, Set<string>>
     const colorMap = new Map();
     const joinMap = new Map();
 
@@ -146,10 +129,34 @@ export const TEI_VIEWER_CORE = {
     joins.forEach((join) => {
       const joinId = join.getAttribute("xml:id");
       const targets = join.getAttribute("target");
-      if (joinId && targets) {
-        const targetIds = targets.split(" ").map(s => s.replace("#", ""));
-        joinMap.set(joinId, targetIds);
+
+      // Validation: skip empty or invalid joins
+      if (!joinId || !targets || !targets.trim()) {
+        if (joinId) {
+          console.warn(`Join element "${joinId}" has no targets`);
+        }
+        return;
       }
+
+      const targetIds = targets.split(" ")
+        .map(s => s.replace("#", "").trim())
+        .filter(s => s.length > 0);
+
+      if (targetIds.length === 0) {
+        console.warn(`Join element "${joinId}" has no valid targets after filtering`);
+        return;
+      }
+
+      joinMap.set(joinId, targetIds);
+
+      // Also add join ID to linkMap so sidebar links work
+      // When clicking a join link, it should highlight all segments in the join
+      if (!linkMap.has(joinId)) {
+        linkMap.set(joinId, new Set());
+      }
+      targetIds.forEach(targetId => {
+        linkMap.get(joinId).add(targetId);
+      });
     });
 
     // Process alignment links
@@ -172,16 +179,45 @@ export const TEI_VIEWER_CORE = {
       const ids1 = resolveIds(id1);
       const ids2 = resolveIds(id2);
 
-      // Create bidirectional mappings for all combinations
+      // Create bidirectional mappings for all combinations using Sets for O(1) operations
+      // This creates a "visual group" effect: when clicking any segment in a many-to-many
+      // alignment, ALL segments on BOTH sides are highlighted together.
+      // Example: If join1=(A1,A2,A3) aligns with join2=(B1,B2,B3), clicking A1 highlights:
+      //   - A1, A2, A3 (same-side siblings from join1)
+      //   - B1, B2, B3 (cross-language partners from join2)
+      // This helps users understand the full scope of complex alignments.
+
       ids1.forEach(segId1 => {
-        ids2.forEach(segId2 => {
-          linkMap.set(segId1, segId2);
-          linkMap.set(segId2, segId1);
+        if (!linkMap.has(segId1)) {
+          linkMap.set(segId1, new Set());
+        }
+        const partners = linkMap.get(segId1);
+
+        // Add cross-language partners - O(1) per add
+        ids2.forEach(segId2 => partners.add(segId2));
+
+        // Add same-side siblings (other segments in the same join) - O(1) per add
+        ids1.forEach(sibling => {
+          if (sibling !== segId1) partners.add(sibling);
         });
+
         colorMap.set(segId1, color);
       });
 
       ids2.forEach(segId2 => {
+        if (!linkMap.has(segId2)) {
+          linkMap.set(segId2, new Set());
+        }
+        const partners = linkMap.get(segId2);
+
+        // Add cross-language partners - O(1) per add
+        ids1.forEach(segId1 => partners.add(segId1));
+
+        // Add same-side siblings (other segments in the same join) - O(1) per add
+        ids2.forEach(sibling => {
+          if (sibling !== segId2) partners.add(sibling);
+        });
+
         colorMap.set(segId2, color);
       });
     });
