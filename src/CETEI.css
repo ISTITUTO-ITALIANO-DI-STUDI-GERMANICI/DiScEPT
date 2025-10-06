@@ -1,3 +1,56 @@
+/* ===========================
+   TEI Structural Display Rules
+   =========================== */
+
+/* Block-level containers */
+tei-text,
+tei-body,
+tei-div,
+tei-lg,
+tei-p {
+  display: block;
+}
+
+/* Lines in poetry - block display with proper spacing */
+tei-l {
+  display: block;
+  margin: 0.25em 0;
+  line-height: 1.6;
+}
+
+/* Stanza spacing - visual separation between line groups */
+tei-lg[data-origname="lg"] {
+  margin-bottom: 1.5em;
+}
+
+tei-lg[data-origname="lg"]:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings */
+tei-head {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 1em;
+  font-size: 1.1em;
+}
+
+/* Prose paragraphs */
+tei-p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+/* Segments and words within lines remain inline */
+tei-seg,
+tei-w {
+  display: inline;
+}
+
+/* ===========================
+   Interactive Selection States
+   =========================== */
+
 .selectableTEI {
   background-color: rgba(228, 220, 207, 0.3);
   border-radius: 4px;
