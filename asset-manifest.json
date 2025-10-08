@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/DiScEPT/static/css/main.2b2ba856.css",
+    "main.css": "/DiScEPT/static/css/main.98190329.css",
     "main.js": "/DiScEPT/static/js/main.082a8583.js",
     "index.html": "/DiScEPT/index.html",
-    "main.2b2ba856.css.map": "/DiScEPT/static/css/main.2b2ba856.css.map",
+    "main.98190329.css.map": "/DiScEPT/static/css/main.98190329.css.map",
     "main.082a8583.js.map": "/DiScEPT/static/js/main.082a8583.js.map"
   },
   "entrypoints": [
-    "static/css/main.2b2ba856.css",
+    "static/css/main.98190329.css",
     "static/js/main.082a8583.js"
   ]
 }
