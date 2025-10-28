@@ -7,7 +7,7 @@
 </head>
 <body>
 
-  <tei-alignment-viewer src="infinito.xml"></tei-alignment-viewer>
+  <tei-alignment-viewer></tei-alignment-viewer>
 
   <script type="module">
     class TEIAlignmentViewer extends HTMLElement {
@@ -21,9 +21,31 @@
       }
 
       async connectedCallback() {
+        // Check for static file source first
         const url = this.getAttribute('src');
-        const response = await fetch(url);
-        const xmlText = await response.text();
+        if (url) {
+          const response = await fetch(url);
+          const xmlText = await response.text();
+          this.renderTEI(xmlText);
+        }
+
+        // Listen for TEI content via postMessage
+        window.addEventListener('message', async (event) => {
+          if (event.data && event.data.type === 'tei-content') {
+            try {
+              const response = await fetch(event.data.blobURL);
+              const xmlText = await response.text();
+              this.renderTEI(xmlText);
+              // Clean up blob URL after loading
+              URL.revokeObjectURL(event.data.blobURL);
+            } catch (error) {
+              console.error('Error loading TEI from blob URL:', error);
+            }
+          }
+        });
+      }
+
+      renderTEI(xmlText) {
         const parser = new DOMParser();
         const xml = parser.parseFromString(xmlText, "application/xml");
 
@@ -31,41 +53,64 @@
         const style = document.createElement("style");
         style.textContent = `
           :host {
-            font-family: sans-serif;
+            font-family: 'Inter', 'Roboto', sans-serif;
             display: block;
-            padding: 1rem;
-            max-width: 1200px;
+            padding: 2rem;
+            max-width: 1400px;
             margin: auto;
-            background: #fafafa;
+            background: #F6F5F3;
+            min-height: 100vh;
           }
           .header {
+            background: #FFFFFF;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 16px;
+            box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.06);
+          }
+          .header h2 {
+            color: #2E2E2E;
+            margin-top: 0;
+            font-weight: 600;
+          }
+          .header p {
+            color: #6B6B6B;
             margin-bottom: 1rem;
           }
           .layout {
             display: flex;
             flex-direction: row;
-            gap: 1rem;
+            gap: 1.5rem;
           }
           .sidebar {
-            width: 200px;
-            background: #fffbe6;
-            border: 1px solid #ddd;
-            padding: 0.5rem;
-            border-radius: 5px;
+            width: 240px;
+            background: #FFFFFF;
+            border: 1px solid #E4DCCF;
+            padding: 1rem;
+            border-radius: 16px;
             max-height: 600px;
             overflow-y: auto;
             transition: all 0.3s ease;
+            box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.06);
           }
           .sidebar-toggle {
             cursor: pointer;
-            background: #ffe066;
+            background: #5E9278;
+            color: white;
             border: none;
             width: 100%;
-            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+          }
+          .sidebar-toggle:hover {
+            background: #4A7560;
           }
           .sidebar.minimized {
-            width: 30px;
-            padding: 0.25rem;
+            width: 50px;
+            padding: 0.5rem;
             overflow: hidden;
           }
           .sidebar.minimized a {
@@ -74,52 +119,91 @@
           .sidebar a {
             display: block;
             font-size: 0.85rem;
-            color: #444;
+            color: #5E9278;
             text-decoration: none;
-            margin: 0.2rem 0;
+            padding: 0.6rem 0.75rem;
+            margin: 0.3rem 0;
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .sidebar a:hover {
+            background: #E4DCCF;
+            border-left-color: #5E9278;
+            transform: translateX(2px);
           }
           .controls {
-            margin: 0.5rem 0;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            /* border-top: 1px solid #E4DCCF; */
+          }
+          .controls button {
+            background: #5E9278;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+          }
+          .controls button:hover {
+            background: #4A7560;
           }
           .cards {
             display: flex;
             flex-direction: row;
-            gap: 1rem;
+            gap: 1.5rem;
             flex: 1;
           }
           .card {
             flex: 1;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 1rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            background: #FFFFFF;
+            border: 1px solid #E4DCCF;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.06);
           }
           .card h3 {
             margin-top: 0;
+            color: #2E2E2E;
+            font-weight: 600;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #E4DCCF;
+            margin-bottom: 1rem;
           }
           .verse {
-            padding: 0.3rem 0.5rem;
-            margin: 0.15rem 0;
-            border-radius: 4px;
-            transition: background-color 0.2s, box-shadow 0.2s;
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            border-radius: 10px;
+            transition: all 0.2s;
             cursor: pointer;
             position: relative;
+            color: #2E2E2E;
+            line-height: 1.6;
+          }
+          .verse:hover {
+            transform: translateX(4px);
           }
           .verse.locked {
-            box-shadow: inset 0 0 0 2px #bfa700;
-            outline: 1px solid #bfa700;
+            box-shadow: inset 0 0 0 2px #5E9278;
+            background: rgba(94, 146, 120, 0.1);
           }
           .verse.hovered {
-            outline: 1px solid #ffd000;
-            box-shadow: 0 0 5px #ffd000;
+            box-shadow: 0 0 0 2px #5E9278;
+            background: rgba(94, 146, 120, 0.05);
           }
           .verse-number {
             position: absolute;
             left: -2rem;
-            top: 0.2rem;
+            top: 0.75rem;
             font-size: 0.75rem;
-            color: #aaa;
+            color: #6B6B6B;
+            font-weight: 500;
           }
           .hide-numbers .verse-number {
             display: none;
@@ -140,51 +224,173 @@
 
         const wrapper = document.createElement("div");
 
-        const title = xml.querySelector("teiHeader title")?.textContent || "Titolo";
-        const author = xml.querySelector("teiHeader author")?.textContent || "Autore";
+        // Look for title/author in nested TEI documents (skip wrapper TEI)
+        const nestedTEIs = xml.querySelectorAll("TEI > TEI");
+        let title = "Titolo";
+        let author = "Autore";
+
+        // Try to find title/author from nested TEI documents first
+        for (const tei of nestedTEIs) {
+          const titleEl = tei.querySelector("teiHeader fileDesc titleStmt title") ||
+                          tei.querySelector("teiHeader titleStmt title") ||
+                          tei.querySelector("teiHeader title");
+          const authorEl = tei.querySelector("teiHeader fileDesc titleStmt author") ||
+                           tei.querySelector("teiHeader titleStmt author") ||
+                           tei.querySelector("teiHeader author");
+
+          if (titleEl && titleEl.textContent?.trim()) {
+            title = titleEl.textContent.trim();
+          }
+          if (authorEl && authorEl.textContent?.trim()) {
+            author = authorEl.textContent.trim();
+          }
+
+          // If we found both, break early
+          if (title !== "Titolo" && author !== "Autore") break;
+        }
+
+        // Fallback to root TEI if nothing found in nested
+        if (title === "Titolo") {
+          const titleEl = xml.querySelector("teiHeader fileDesc titleStmt title") ||
+                          xml.querySelector("teiHeader titleStmt title") ||
+                          xml.querySelector("teiHeader title");
+          if (titleEl && titleEl.textContent?.trim()) {
+            title = titleEl.textContent.trim();
+          }
+        }
+        if (author === "Autore") {
+          const authorEl = xml.querySelector("teiHeader fileDesc titleStmt author") ||
+                           xml.querySelector("teiHeader titleStmt author") ||
+                           xml.querySelector("teiHeader author");
+          if (authorEl && authorEl.textContent?.trim()) {
+            author = authorEl.textContent.trim();
+          }
+        }
 
         wrapper.innerHTML = `
           <div class="header">
             <h2>${title}</h2>
             <p><em>${author}</em></p>
             <div class="controls">
-              <button id="toggleNumbers">🔢 Mostra/Nascondi numeri</button>
+              <!-- <button id="toggleNumbers">🔢 Mostra/Nascondi numeri</button> -->
             </div>
           </div>
         `;
 
 
 const palette = [
-  "#cce4f6","#d0f0dc","#e2d5f8","#f6d9c5","#c3e6cb","#d6d8fb",
-  "#b8e2e5","#ffd6e8","#d3e9b9","#f9c7e3","#c9cce3","#ffe0b2",
-  "#b5ead7","#d7cff9","#f2c2d6","#add8e6"
+  "rgba(94, 146, 120, 0.15)",   // Sage green tint
+  "rgba(228, 220, 207, 0.25)",  // Beige tint
+  "rgba(94, 146, 120, 0.08)",   // Lighter sage
+  "rgba(228, 220, 207, 0.15)",  // Lighter beige
+  "rgba(46, 46, 46, 0.05)",     // Subtle gray
+  "rgba(107, 107, 107, 0.08)",  // Medium gray tint
+  "rgba(94, 146, 120, 0.20)",   // Darker sage
+  "rgba(228, 220, 207, 0.30)",  // Darker beige
+  "rgba(94, 146, 120, 0.10)",   // Sage variant
+  "rgba(228, 220, 207, 0.20)",  // Beige variant
+  "rgba(46, 46, 46, 0.08)",     // Gray variant
+  "rgba(107, 107, 107, 0.05)"   // Light gray
 ];
 
         const links = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link"));
         links.forEach((link, idx) => {
-          const [id1, id2] = link.getAttribute("target").split(" ").map(s => s.replace("#", ""));
+          const targets = link.getAttribute("target").split(" ").map(s => s.replace("#", ""));
+          if (targets.length < 2) return;
+
+          const [id1, id2] = targets;
           const color = palette[idx % palette.length];
-          this.linkMap.set(id1, id2);
-          this.linkMap.set(id2, id1);
+
+          // Note: Standalone viewer doesn't support join elements
+          // For full join support, use the exported HTML viewer
+          if (!this.linkMap.has(id1)) this.linkMap.set(id1, []);
+          if (!this.linkMap.has(id2)) this.linkMap.set(id2, []);
+
+          if (!this.linkMap.get(id1).includes(id2)) {
+            this.linkMap.get(id1).push(id2);
+          }
+          if (!this.linkMap.get(id2).includes(id1)) {
+            this.linkMap.get(id2).push(id1);
+          }
+
           this.colorMap.set(id1, color);
           this.colorMap.set(id2, color);
         });
 
-        const teis = xml.querySelectorAll("TEI");
-        const langData = { it: [], de: [] };
+        // Select only nested TEI elements (not the root wrapper)
+        const teis = xml.querySelectorAll("TEI > TEI");
+        const langData = {};
 
         teis.forEach(tei => {
-          const lang = tei.querySelector("language")?.textContent?.toLowerCase();
-          const lines = tei.querySelectorAll("text > body l");
+          const langElement = tei.querySelector("language");
+          if (!langElement) return;
+
+          const lang = langElement.textContent?.toLowerCase() || langElement.getAttribute("ident")?.toLowerCase();
+          if (!lang) return;
+
+          // Look for ALL text content elements using universal TEI element support
+          const allElements = Array.from(tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note"));
           const verses = [];
-          lines.forEach((line, i) => {
-            const id = line.getAttribute("xml:id");
-            const text = line.textContent;
-            const color = this.colorMap.get(id) || "";
-            verses.push({ id, text, color, n: i + 1 });
+          let elementIndex = 0;
+
+          allElements.forEach((element) => {
+            // Check if element contains segments
+            const segments = element.querySelectorAll("seg");
+
+            if (segments.length > 0) {
+              // Element contains segments - extract each segment individually
+              segments.forEach(seg => {
+                const text = seg.textContent.trim();
+                if (!text) return;
+
+                const id = seg.getAttribute("xml:id");
+                const color = id ? (this.colorMap.get(id) || "") : "";
+                const isAligned = id ? this.colorMap.has(id) : false;
+
+                verses.push({
+                  id: id || `element-${++elementIndex}`,
+                  text,
+                  color,
+                  n: elementIndex,
+                  isAligned
+                });
+              });
+            } else {
+              // Element-level alignment (no segments)
+              const text = element.textContent.trim();
+              if (!text) return;
+
+              // Skip if this element is contained within another element we're already processing
+              const hasParentInList = allElements.some(other =>
+                other !== element && other.contains(element)
+              );
+              if (hasParentInList) return;
+
+              const id = element.getAttribute("xml:id") || null;
+              const color = id ? (this.colorMap.get(id) || "") : "";
+              const isAligned = id ? this.colorMap.has(id) : false;
+
+              verses.push({
+                id: id || `element-${++elementIndex}`,
+                text,
+                color,
+                n: elementIndex,
+                isAligned
+              });
+            }
           });
-          if (lang.includes("italiano")) langData.it = verses;
-          if (lang.includes("tedesco")) langData.de = verses;
+
+          // Store by language code or full name
+          if (lang.includes("it") || lang.includes("italiano")) {
+            langData.it = verses;
+          } else if (lang.includes("de") || lang.includes("tedesco") || lang.includes("deutsch")) {
+            langData.de = verses;
+          } else if (lang.includes("en") || lang.includes("english")) {
+            langData.en = verses;
+          } else {
+            // Store with the language identifier as key
+            langData[lang] = verses;
+          }
         });
 
         const layout = document.createElement("div");
@@ -198,10 +404,22 @@ const palette = [
         toggleBtn.onclick = () => sidebar.classList.toggle("minimized");
         sidebar.appendChild(toggleBtn);
         links.forEach((link, idx) => {
-          const id1 = link.getAttribute("target").split(" ")[0].replace("#", "");
+          const targets = link.getAttribute("target");
+          if (!targets) return;
+          const [id1, id2] = targets.split(" ").map(s => s.replace("#", ""));
+
+          // Try to get preview text from the elements
+          const element1 = xml.querySelector(`[xml\\:id="${id1}"]`);
+          let linkText = `Alignment ${idx + 1}`;
+          if (element1) {
+            const previewText = element1.textContent.trim().substring(0, 30);
+            linkText = previewText.length > 30 ? previewText + "..." : previewText;
+          }
+
           const a = document.createElement("a");
           a.href = `#${id1}`;
-          a.textContent = `Verso ${idx + 1}`;
+          a.textContent = linkText;
+          a.title = `Scroll to alignment pair ${idx + 1}`;
           a.onclick = e => {
             e.preventDefault();
             this.scrollToVerses(id1);
@@ -241,26 +459,56 @@ const palette = [
           return card;
         };
 
-        cards.appendChild(makeCard("it", "Testo Italiano"));
-        cards.appendChild(makeCard("de", "Traduzione Tedesca"));
+        // Create cards for each language found
+        const langLabels = {
+          it: "Italian Text",
+          de: "German Translation",
+          en: "English Translation",
+          fr: "French Translation"
+        };
+
+        Object.keys(langData).forEach(lang => {
+          if (langData[lang] && langData[lang].length > 0) {
+            const label = langLabels[lang] || `Text (${lang})`;
+            cards.appendChild(makeCard(lang, label));
+          }
+        });
 
         layout.appendChild(sidebar);
         layout.appendChild(cards);
         wrapper.appendChild(layout);
+        // Clear previous content before rendering new TEI
+        this.shadowRoot.innerHTML = '';
+
         shadow.appendChild(style);
         shadow.appendChild(wrapper);
 
-        shadow.querySelector("#toggleNumbers").onclick = () => {
-          this.showNumbers = !this.showNumbers;
-          shadow.querySelectorAll(".card").forEach(card => {
-            card.classList.toggle("hide-numbers", !this.showNumbers);
-          });
-        };
+        // Comment out toggle numbers functionality for now
+        // const toggleNumbersBtn = shadow.querySelector("#toggleNumbers");
+        // if (toggleNumbersBtn) {
+        //   toggleNumbersBtn.onclick = () => {
+        //     this.showNumbers = !this.showNumbers;
+        //     shadow.querySelectorAll(".card").forEach(card => {
+        //       card.classList.toggle("hide-numbers", !this.showNumbers);
+        //     });
+        //   };
+        // }
       }
 
       highlight(id, on) {
-        const partnerId = this.linkMap.get(id);
-        const verses = this.shadowRoot.querySelectorAll(`[data-id="${id}"], [data-id="${partnerId}"]`);
+        const partnerIds = this.linkMap.get(id) || [];
+        const verses = [];
+
+        // Find elements by data-id individually to avoid CSS selector issues
+        const allVerses = this.shadowRoot.querySelectorAll('[data-id]');
+        allVerses.forEach(verse => {
+          const dataId = verse.getAttribute('data-id');
+          // Check if this is the clicked element or any of its partners
+          if (dataId === id || partnerIds.includes(dataId)) {
+            verses.push(verse);
+          }
+        });
+
         verses.forEach(verse => verse.classList.toggle("hovered", on));
         if (on) {
           this.locked.has(id) && verses.forEach(v => v.classList.add("locked"));
@@ -270,8 +518,19 @@ const palette = [
       }
 
       scrollToVerses(id) {
-        const partnerId = this.linkMap.get(id);
-        const targets = this.shadowRoot.querySelectorAll(`#${id}, #${partnerId}`);
+        const partnerIds = this.linkMap.get(id) || [];
+        const targets = [];
+
+        // Find clicked element
+        const element = this.shadowRoot.getElementById(id);
+        if (element) targets.push(element);
+
+        // Find all partner elements
+        partnerIds.forEach(partnerId => {
+          const partnerElement = this.shadowRoot.getElementById(partnerId);
+          if (partnerElement) targets.push(partnerElement);
+        });
+
         targets.forEach(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
         this.highlight(id, true);
         setTimeout(() => {
