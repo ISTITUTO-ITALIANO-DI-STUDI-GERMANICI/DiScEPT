@@ -5,9 +5,13 @@ import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select from "@mui/material/Select";
 import Button from "@mui/material/Button";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import CodeIcon from "@mui/icons-material/Code";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import data from "../Data.js";
-import CETEIHelper from "../CETEIHelper.js";
+import InteractiveXMLViewer from "./interactivexmlviewer.js";
 
 /**
  * AlignTab component provides a user interface for selecting a language,
@@ -18,71 +22,63 @@ class AlignTab extends React.Component {
   constructor(props) {
     super(props);
 
-    // Initial state includes selected language and refresh tracking
-    this.state = { language: "", lastRefresh: 0 };
-    // Reference to content container for dynamic updates
+    // Initial state includes selected language, view mode, and refresh tracking
+    this.state = {
+      language: "",
+      lastRefresh: 0,
+      viewMode: 'rendered', // 'rendered' hides tags, 'xml' shows tags
+      refreshKey: 0 // Used to force re-render of InteractiveXMLViewer
+    };
+
+    // Reference to InteractiveXMLViewer's content (needed for selectAll/deselectAll)
     this.contentRef = React.createRef();
+    this.viewerRef = React.createRef();
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidMount() {
+    // Link contentRef to viewer's internal contentRef
+    if (this.viewerRef.current) {
+      this.contentRef.current = this.viewerRef.current.contentRef.current;
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
     // Check if a refresh is needed based on props change
     if (
       this.props.refreshNeeded !== prevProps.refreshNeeded &&
       this.props.refreshNeeded !== this.state.lastRefresh &&
-      this.contentRef.current &&
       this.state.language
     ) {
-      this.setState({ lastRefresh: this.props.refreshNeeded });
-      this.refresh(this.state.language);
+      this.setState({
+        lastRefresh: this.props.refreshNeeded,
+        refreshKey: this.state.refreshKey + 1
+      });
     }
 
     // Check if alignment documents were updated
     if (this.props.alignmentUpdated !== prevProps.alignmentUpdated &&
         this.state.language &&
         this.props.alignmentUpdated?.includes(this.state.language)) {
-      this.refresh(this.state.language);
+      this.setState({ refreshKey: this.state.refreshKey + 1 });
+    }
+
+    // Update contentRef pointer when viewer changes
+    if (this.viewerRef.current) {
+      this.contentRef.current = this.viewerRef.current.contentRef.current;
     }
   }
 
   /**
-   * Refreshes the content based on the selected language.
-   * Clears existing content and re-generates it using CETEIHelper, with
-   * alignment logic applied to TEI elements.
-   *
-   * @param {string} language - The language code to load content for.
-   */
-  refresh = (language) => {
-    if (!this.contentRef.current) {
-      return;
-    }
-
-    this.contentRef.current.innerHTML = "";
-    this.contentRef.current.append(
-      CETEIHelper.CETEI.makeHTML5(data.getDocumentPerLanguage(language), null, (domElm, teiElm) =>
-        this.alignLogic(this.props.id, this.contentRef.current, domElm, teiElm)
-      )
-    );
-  };
-
-  /**
    * Configures interactive logic for a TEI element.
    * Sets click and hover events to change the appearance and behavior of TEI elements.
+   * Allows selection of both leaf elements and parent elements with children.
    *
-   * @param {string} id - The unique identifier for the element.
-   * @param {HTMLElement} rootElm - The root element of the content.
    * @param {HTMLElement} domElm - The DOM element being configured.
    * @param {HTMLElement} teiElm - The TEI element related to domElm.
    */
-  alignLogic = (id, rootElm, domElm, teiElm) => {
-    domElm.__teiElm = teiElm;
-
-    // Apply hover events only to TEI leaves (elements without TEI children)
-    if (teiElm.children.length > 0) {
-      return;
-    }
-
+  alignLogic = (domElm, teiElm) => {
     domElm.addEventListener("click", (e) => {
-      this.props.onSelectionChanged(domElm, teiElm, rootElm);
+      this.props.onSelectionChanged(domElm, teiElm, domElm.parentElement);
       e.stopPropagation();
     });
 
@@ -110,8 +106,22 @@ class AlignTab extends React.Component {
      */
     const handleChange = (event) => {
       this.props.onLanguageChanged(event.target.value);
-      this.setState({ language: event.target.value });
-      this.refresh(event.target.value);
+      this.setState({
+        language: event.target.value,
+        refreshKey: this.state.refreshKey + 1
+      });
+    };
+
+    /**
+     * Handles view mode changes between rendered and XML views.
+     *
+     * @param {object} event - The change event from the ToggleButtonGroup.
+     * @param {string} newMode - The new view mode ('rendered' or 'xml').
+     */
+    const handleViewModeChange = (event, newMode) => {
+      if (newMode !== null) {
+        this.setState({ viewMode: newMode });
+      }
     };
 
     return (
@@ -143,28 +153,66 @@ class AlignTab extends React.Component {
           </Select>
         </FormControl>
 
-        <Box sx={{ display: "flex", gap: 1, my: 1 }}>
-          <Button
+        {/* View mode toggle */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 1 }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={this.props.onTokenize}
+              disabled={!this.props.hasSelection}
+            >
+              Tokenize selection
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={this.props.onTokenizeAll}
+            >
+              Tokenize all
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={this.props.onSelectAll}
+            >
+              Select all
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={this.props.onDeselectAll}
+            >
+              Deselect all
+            </Button>
+          </Box>
+
+          <ToggleButtonGroup
+            value={this.state.viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            aria-label="view mode"
             size="small"
-            variant="outlined"
-            onClick={this.props.onTokenize}
-            disabled={!this.props.hasSelection}
           >
-            Tokenize selection
-          </Button>
-          <Button size="small" variant="outlined" onClick={this.props.onTokenizeAll}>
-            Tokenize all
-          </Button>
-          <Button size="small" variant="outlined" onClick={this.props.onSelectAll}>
-            Select all
-          </Button>
-          <Button size="small" variant="outlined" onClick={this.props.onDeselectAll}>
-            Deselect all
-          </Button>
+            <ToggleButton value="rendered" aria-label="rendered view">
+              <VisibilityIcon fontSize="small" />
+            </ToggleButton>
+            <ToggleButton value="xml" aria-label="xml view">
+              <CodeIcon fontSize="small" />
+            </ToggleButton>
+          </ToggleButtonGroup>
         </Box>
 
-        {/* Content container for dynamic TEI elements */}
-        <div ref={this.contentRef} />
+        {/* Unified viewer - shows/hides tags based on viewMode */}
+        {this.state.language && (
+          <InteractiveXMLViewer
+            ref={this.viewerRef}
+            key={this.state.refreshKey} // Force re-render when content changes
+            xmlContent={data.getDocumentPerLanguage(this.state.language) || ""}
+            showTags={this.state.viewMode === 'xml'}
+            onElementInteraction={this.alignLogic}
+          />
+        )}
       </Box>
     );
   }
