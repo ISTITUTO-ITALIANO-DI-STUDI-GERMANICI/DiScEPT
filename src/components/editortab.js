@@ -61,6 +61,11 @@ export default function EditorTab({ visible, language }) {
     }
   };
 
+  // Sync content with language prop when it changes (user switched documents)
+  React.useEffect(() => {
+    setContent(data.getDocumentPerLanguage(language) || "");
+  }, [language]);
+
   // Sets initial content in the editor when the editor mounts
   function handleEditorDidMount(editor, monaco) {
     editor.getModel().setValue(content); // Sets editor's content to match 'content' state
@@ -68,8 +73,11 @@ export default function EditorTab({ visible, language }) {
 
   // Handles changes in the editor, updates state and persists the content per language
   function handleEditorChange(value, event) {
-    data.updateDocumentPerLanguage(language, value); // Updates content in data storage
-    setContent(value); // Updates 'content' state
+    // Update the document content for the current language
+    // Note: If you change <language ident="...">, the change will take effect
+    // when you save and reload the project (handled by Data.js getter)
+    data.updateDocumentPerLanguage(language, value);
+    setContent(value);
   }
 
   return (

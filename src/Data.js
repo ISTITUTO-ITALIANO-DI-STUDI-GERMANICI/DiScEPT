@@ -183,6 +183,364 @@ const helpers = [
     },
   },
 
+  // Extended metadata fields
+  {
+    setter: (dom, data) => {
+      const getOrCreate = (xpath, parent, tagName) => {
+        const result = dom.evaluate(xpath, dom, (prefix) => (prefix === "tei" ? TEI_NS : null), XPathResult.ANY_TYPE, null);
+        let elm = result.iterateNext();
+        if (!elm && parent) {
+          elm = dom.createElementNS(TEI_NS, tagName);
+          parent.appendChild(elm);
+        }
+        return elm;
+      };
+
+      const teiHeader = getOrCreate("/tei:TEI/tei:teiHeader", dom.documentElement, "teiHeader");
+      const fileDesc = getOrCreate("/tei:TEI/tei:teiHeader/tei:fileDesc", teiHeader, "fileDesc");
+      const titleStmt = getOrCreate("/tei:TEI/tei:teiHeader/tei:fileDesc/tei:titleStmt", fileDesc, "titleStmt");
+      const publicationStmt = getOrCreate("/tei:TEI/tei:teiHeader/tei:fileDesc/tei:publicationStmt", fileDesc, "publicationStmt");
+      const sourceDesc = getOrCreate("/tei:TEI/tei:teiHeader/tei:fileDesc/tei:sourceDesc", fileDesc, "sourceDesc");
+
+      // Subtitle
+      if (data.project.subtitle) {
+        let subtitle = titleStmt.querySelector("title[type='sub']");
+        if (!subtitle) {
+          subtitle = dom.createElementNS(TEI_NS, "title");
+          subtitle.setAttribute("type", "sub");
+          titleStmt.appendChild(subtitle);
+        }
+        subtitle.textContent = data.project.subtitle;
+      }
+
+      // Editors
+      Array.from(titleStmt.querySelectorAll("editor")).forEach((e) => e.remove());
+      if (Array.isArray(data.project.editors)) {
+        data.project.editors.forEach((e) => {
+          if (!e) return;
+          const elm = dom.createElementNS(TEI_NS, "editor");
+          elm.textContent = e;
+          titleStmt.appendChild(elm);
+        });
+      }
+
+      // Publisher
+      if (data.project.publisher) {
+        let pub = publicationStmt.querySelector("publisher");
+        if (!pub) {
+          pub = dom.createElementNS(TEI_NS, "publisher");
+          publicationStmt.appendChild(pub);
+        }
+        pub.textContent = data.project.publisher;
+      }
+
+      // Publication place
+      if (data.project.pubPlace) {
+        let place = publicationStmt.querySelector("pubPlace");
+        if (!place) {
+          place = dom.createElementNS(TEI_NS, "pubPlace");
+          publicationStmt.appendChild(place);
+        }
+        place.textContent = data.project.pubPlace;
+      }
+
+      // Publication date
+      if (data.project.pubDate) {
+        let date = publicationStmt.querySelector("date");
+        if (!date) {
+          date = dom.createElementNS(TEI_NS, "date");
+          publicationStmt.appendChild(date);
+        }
+        date.textContent = data.project.pubDate;
+      }
+
+      // Availability/License
+      if (data.project.availability) {
+        let avail = publicationStmt.querySelector("availability");
+        if (!avail) {
+          avail = dom.createElementNS(TEI_NS, "availability");
+          publicationStmt.appendChild(avail);
+        }
+        let p = avail.querySelector("p");
+        if (!p) {
+          p = dom.createElementNS(TEI_NS, "p");
+          avail.appendChild(p);
+        }
+        p.textContent = data.project.availability;
+      }
+
+      // Edition
+      if (data.project.edition) {
+        let editionStmt = fileDesc.querySelector("editionStmt");
+        if (!editionStmt) {
+          editionStmt = dom.createElementNS(TEI_NS, "editionStmt");
+          fileDesc.insertBefore(editionStmt, publicationStmt);
+        }
+        let edition = editionStmt.querySelector("edition");
+        if (!edition) {
+          edition = dom.createElementNS(TEI_NS, "edition");
+          editionStmt.appendChild(edition);
+        }
+        edition.textContent = data.project.edition;
+      }
+
+      // Series
+      if (data.project.series) {
+        let seriesStmt = fileDesc.querySelector("seriesStmt");
+        if (!seriesStmt) {
+          seriesStmt = dom.createElementNS(TEI_NS, "seriesStmt");
+          fileDesc.appendChild(seriesStmt);
+        }
+        let title = seriesStmt.querySelector("title");
+        if (!title) {
+          title = dom.createElementNS(TEI_NS, "title");
+          seriesStmt.appendChild(title);
+        }
+        title.textContent = data.project.series;
+      }
+
+      // Source description
+      if (data.project.sourceDesc) {
+        let p = sourceDesc.querySelector("p");
+        if (!p) {
+          p = dom.createElementNS(TEI_NS, "p");
+          sourceDesc.appendChild(p);
+        }
+        p.textContent = data.project.sourceDesc;
+      }
+
+      // Extent
+      if (data.project.extent) {
+        let extent = fileDesc.querySelector("extent");
+        if (!extent) {
+          extent = dom.createElementNS(TEI_NS, "extent");
+          fileDesc.insertBefore(extent, publicationStmt);
+        }
+        extent.textContent = data.project.extent;
+      }
+
+      // Profile Description
+      let profileDesc = dom.evaluate("/tei:TEI/tei:teiHeader/tei:profileDesc", dom, (prefix) => (prefix === "tei" ? TEI_NS : null), XPathResult.ANY_TYPE, null).iterateNext();
+      if (!profileDesc) {
+        profileDesc = dom.createElementNS(TEI_NS, "profileDesc");
+        teiHeader.appendChild(profileDesc);
+      }
+
+      // Abstract
+      if (data.project.abstract) {
+        let abstract = profileDesc.querySelector("abstract");
+        if (!abstract) {
+          abstract = dom.createElementNS(TEI_NS, "abstract");
+          profileDesc.appendChild(abstract);
+        }
+        let p = abstract.querySelector("p");
+        if (!p) {
+          p = dom.createElementNS(TEI_NS, "p");
+          abstract.appendChild(p);
+        }
+        p.textContent = data.project.abstract;
+      }
+
+      // Keywords
+      if (Array.isArray(data.project.keywords) && data.project.keywords.length > 0) {
+        let textClass = profileDesc.querySelector("textClass");
+        if (!textClass) {
+          textClass = dom.createElementNS(TEI_NS, "textClass");
+          profileDesc.appendChild(textClass);
+        }
+        let keywords = textClass.querySelector("keywords");
+        if (!keywords) {
+          keywords = dom.createElementNS(TEI_NS, "keywords");
+          textClass.appendChild(keywords);
+        }
+        Array.from(keywords.querySelectorAll("term")).forEach((e) => e.remove());
+        data.project.keywords.forEach((k) => {
+          if (!k) return;
+          const term = dom.createElementNS(TEI_NS, "term");
+          term.textContent = k;
+          keywords.appendChild(term);
+        });
+      }
+
+      // Classification
+      if (data.project.classification) {
+        let textClass = profileDesc.querySelector("textClass");
+        if (!textClass) {
+          textClass = dom.createElementNS(TEI_NS, "textClass");
+          profileDesc.appendChild(textClass);
+        }
+        let classCode = textClass.querySelector("classCode");
+        if (!classCode) {
+          classCode = dom.createElementNS(TEI_NS, "classCode");
+          textClass.appendChild(classCode);
+        }
+        classCode.textContent = data.project.classification;
+      }
+
+      // Encoding Description
+      let encodingDesc = dom.evaluate("/tei:TEI/tei:teiHeader/tei:encodingDesc", dom, (prefix) => (prefix === "tei" ? TEI_NS : null), XPathResult.ANY_TYPE, null).iterateNext();
+      if (data.project.encodingDesc || data.project.projectDesc) {
+        if (!encodingDesc) {
+          encodingDesc = dom.createElementNS(TEI_NS, "encodingDesc");
+          teiHeader.appendChild(encodingDesc);
+        }
+
+        if (data.project.projectDesc) {
+          let projectDesc = encodingDesc.querySelector("projectDesc");
+          if (!projectDesc) {
+            projectDesc = dom.createElementNS(TEI_NS, "projectDesc");
+            encodingDesc.appendChild(projectDesc);
+          }
+          let p = projectDesc.querySelector("p");
+          if (!p) {
+            p = dom.createElementNS(TEI_NS, "p");
+            projectDesc.appendChild(p);
+          }
+          p.textContent = data.project.projectDesc;
+        }
+
+        if (data.project.encodingDesc) {
+          let editorialDecl = encodingDesc.querySelector("editorialDecl");
+          if (!editorialDecl) {
+            editorialDecl = dom.createElementNS(TEI_NS, "editorialDecl");
+            encodingDesc.appendChild(editorialDecl);
+          }
+          let p = editorialDecl.querySelector("p");
+          if (!p) {
+            p = dom.createElementNS(TEI_NS, "p");
+            editorialDecl.appendChild(p);
+          }
+          p.textContent = data.project.encodingDesc;
+        }
+      }
+
+      // Funding
+      if (data.project.funding || data.project.sponsor || (Array.isArray(data.project.funder) && data.project.funder.length > 0)) {
+        if (data.project.funding) {
+          let funding = titleStmt.querySelector("funder");
+          if (!funding) {
+            funding = dom.createElementNS(TEI_NS, "funder");
+            titleStmt.appendChild(funding);
+          }
+          funding.textContent = data.project.funding;
+        }
+
+        if (data.project.sponsor) {
+          let sponsor = titleStmt.querySelector("sponsor");
+          if (!sponsor) {
+            sponsor = dom.createElementNS(TEI_NS, "sponsor");
+            titleStmt.appendChild(sponsor);
+          }
+          sponsor.textContent = data.project.sponsor;
+        }
+
+        if (Array.isArray(data.project.funder)) {
+          data.project.funder.forEach((f) => {
+            if (!f) return;
+            const funder = dom.createElementNS(TEI_NS, "funder");
+            funder.textContent = f;
+            titleStmt.appendChild(funder);
+          });
+        }
+      }
+
+      // Original Language
+      if (data.project.originalLang) {
+        let langUsage = profileDesc.querySelector("langUsage");
+        if (!langUsage) {
+          langUsage = dom.createElementNS(TEI_NS, "langUsage");
+          profileDesc.appendChild(langUsage);
+        }
+        let language = dom.createElementNS(TEI_NS, "language");
+        language.setAttribute("ident", data.project.originalLang);
+        language.textContent = data.project.originalLang;
+        langUsage.insertBefore(language, langUsage.firstChild);
+      }
+    },
+
+    getter: (dom, data) => {
+      const project = data.project || {};
+
+      // Subtitle
+      const subtitle = dom.querySelector("teiHeader fileDesc titleStmt title[type='sub']");
+      if (subtitle) project.subtitle = subtitle.textContent;
+
+      // Editors
+      const editors = Array.from(dom.querySelectorAll("teiHeader fileDesc titleStmt editor")).map(e => e.textContent);
+      if (editors.length) project.editors = editors;
+
+      // Publisher
+      const publisher = dom.querySelector("teiHeader fileDesc publicationStmt publisher");
+      if (publisher) project.publisher = publisher.textContent;
+
+      // Publication place
+      const pubPlace = dom.querySelector("teiHeader fileDesc publicationStmt pubPlace");
+      if (pubPlace) project.pubPlace = pubPlace.textContent;
+
+      // Publication date
+      const pubDate = dom.querySelector("teiHeader fileDesc publicationStmt date");
+      if (pubDate) project.pubDate = pubDate.textContent;
+
+      // Availability
+      const availability = dom.querySelector("teiHeader fileDesc publicationStmt availability p");
+      if (availability) project.availability = availability.textContent;
+
+      // Edition
+      const edition = dom.querySelector("teiHeader fileDesc editionStmt edition");
+      if (edition) project.edition = edition.textContent;
+
+      // Series
+      const series = dom.querySelector("teiHeader fileDesc seriesStmt title");
+      if (series) project.series = series.textContent;
+
+      // Source description
+      const sourceDesc = dom.querySelector("teiHeader fileDesc sourceDesc p");
+      if (sourceDesc) project.sourceDesc = sourceDesc.textContent;
+
+      // Extent
+      const extent = dom.querySelector("teiHeader fileDesc extent");
+      if (extent) project.extent = extent.textContent;
+
+      // Abstract
+      const abstract = dom.querySelector("teiHeader profileDesc abstract p");
+      if (abstract) project.abstract = abstract.textContent;
+
+      // Keywords
+      const keywords = Array.from(dom.querySelectorAll("teiHeader profileDesc textClass keywords term")).map(t => t.textContent);
+      if (keywords.length) project.keywords = keywords;
+
+      // Classification
+      const classification = dom.querySelector("teiHeader profileDesc textClass classCode");
+      if (classification) project.classification = classification.textContent;
+
+      // Project description
+      const projectDesc = dom.querySelector("teiHeader encodingDesc projectDesc p");
+      if (projectDesc) project.projectDesc = projectDesc.textContent;
+
+      // Encoding description
+      const encodingDesc = dom.querySelector("teiHeader encodingDesc editorialDecl p");
+      if (encodingDesc) project.encodingDesc = encodingDesc.textContent;
+
+      // Funding
+      const funding = dom.querySelector("teiHeader fileDesc titleStmt funder");
+      if (funding) project.funding = funding.textContent;
+
+      // Sponsor
+      const sponsor = dom.querySelector("teiHeader fileDesc titleStmt sponsor");
+      if (sponsor) project.sponsor = sponsor.textContent;
+
+      // Funders (multiple)
+      const funders = Array.from(dom.querySelectorAll("teiHeader fileDesc titleStmt funder")).map(f => f.textContent);
+      if (funders.length) project.funder = funders;
+
+      // Original language
+      const originalLang = dom.querySelector("teiHeader profileDesc langUsage language");
+      if (originalLang) project.originalLang = originalLang.getAttribute("ident") || originalLang.textContent;
+
+      data.project = project;
+    },
+  },
+
   // Documents and languages
   {
     getter: (dom, data) =>
@@ -635,6 +993,23 @@ class Data {
 
   updateDocumentPerLanguage(language, value) {
     this.#documents[language].document = value;
+    this.#changed = true;
+  }
+
+  renameDocumentLanguage(oldLanguage, newLanguage) {
+    if (!this.#documents[oldLanguage]) {
+      return;
+    }
+
+    // Don't rename if target language already exists
+    if (this.#documents[newLanguage]) {
+      console.warn(`Language ${newLanguage} already exists, cannot rename`);
+      return;
+    }
+
+    // Move document from old language to new language
+    this.#documents[newLanguage] = this.#documents[oldLanguage];
+    delete this.#documents[oldLanguage];
     this.#changed = true;
   }
 
