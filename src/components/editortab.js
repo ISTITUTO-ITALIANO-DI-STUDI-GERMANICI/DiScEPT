@@ -3,7 +3,6 @@ import * as React from "react";
 import PropTypes from "prop-types"; // Prop types validation for components
 import Tabs from "@mui/material/Tabs"; // Tabs component from Material-UI for tab navigation
 import Tab from "@mui/material/Tab"; // Individual Tab component within Tabs
-import Typography from "@mui/material/Typography"; // Typography component for consistent text styling
 import Box from "@mui/material/Box"; // Box component for layout structure
 import Editor from "@monaco-editor/react"; // Monaco editor, a code editor component
 import ToggleButton from "@mui/material/ToggleButton";
@@ -49,7 +48,7 @@ function a11yProps(index) {
 // EditorTab Component - Main component with tabs for editing and previewing TEI XML content
 export default function EditorTab({ visible, language }) {
   const [tab, setTab] = React.useState(0); // State to manage active tab
-  const [viewMode, setViewMode] = React.useState('rendered'); // 'rendered' for CETEI, 'xml' for formatted XML
+  const [viewMode, setViewMode] = React.useState('rendered'); // 'rendered' for HTML view, 'xml' for formatted XML
   const [content, setContent] = React.useState(
     data.getDocumentPerLanguage(language) || "", // Initialize content based on selected language
   );

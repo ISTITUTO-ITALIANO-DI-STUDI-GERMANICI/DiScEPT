@@ -13,9 +13,10 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 
 import AlignTab from "../components/aligntab.js";
-import AutomagicButton from "../components/automagicbutton.js";
+import SmartAlignButton from "../components/smartalignbutton.js";
 import Title from "../components/title.js";
 
 import data, { ALIGNMENT_CATEGORIES } from "../Data.js";
@@ -35,6 +36,7 @@ class AlignmentView extends React.Component {
       listRefreshNeeded: 0,
       category: ALIGNMENT_CATEGORIES[0],
       alignmentUpdated: [],  // Track updated languages
+      editingAlignment: null,  // Index of alignment being edited, null if not editing
     };
 
     this.tabAref = React.createRef();
@@ -215,6 +217,64 @@ class AlignmentView extends React.Component {
       this.setState(newState);
     };
 
+    const editAlignment = (index) => {
+      const alignments = data.getAlignments(
+        this.state.tabALanguage,
+        this.state.tabBLanguage,
+      );
+      if (!alignments || !alignments[index]) {
+        return;
+      }
+
+      const alignment = alignments[index];
+
+      // Clear any existing selections
+      deselectAll("tabA");
+      deselectAll("tabB");
+
+      // Select elements for tab A
+      const tabAElements = alignment.a
+        .map((id) => {
+          const domElm = document.getElementById(id);
+          if (domElm && domElm.__teiElm) {
+            domElm.classList.add("selectedTEI");
+            return { domElm, teiElm: domElm.__teiElm };
+          }
+          return null;
+        })
+        .filter((elm) => elm);
+
+      // Select elements for tab B
+      const tabBElements = alignment.b
+        .map((id) => {
+          const domElm = document.getElementById(id);
+          if (domElm && domElm.__teiElm) {
+            domElm.classList.add("selectedTEI");
+            return { domElm, teiElm: domElm.__teiElm };
+          }
+          return null;
+        })
+        .filter((elm) => elm);
+
+      this.setState({
+        tabASelections: tabAElements,
+        tabBSelections: tabBElements,
+        category: alignment.category,
+        editingAlignment: index,
+      });
+    };
+
+    const cancelEdit = () => {
+      deselectAll("tabA");
+      deselectAll("tabB");
+      this.setState({
+        tabASelections: [],
+        tabBSelections: [],
+        editingAlignment: null,
+        category: ALIGNMENT_CATEGORIES[0],
+      });
+    };
+
     const createLink = () => {
       const langAIds = [];
       const langBIds = [];
@@ -247,13 +307,25 @@ class AlignmentView extends React.Component {
         });
       }
 
-      data.addAlignment(
-        this.state.tabALanguage,
-        this.state.tabBLanguage,
-        langAIds,
-        langBIds,
-        this.state.category,
-      );
+      // Update existing alignment or create new one
+      if (this.state.editingAlignment !== null) {
+        data.updateAlignment(
+          this.state.tabALanguage,
+          this.state.tabBLanguage,
+          this.state.editingAlignment,
+          langAIds,
+          langBIds,
+          this.state.category,
+        );
+      } else {
+        data.addAlignment(
+          this.state.tabALanguage,
+          this.state.tabBLanguage,
+          langAIds,
+          langBIds,
+          this.state.category,
+        );
+      }
 
       for (const tab of [
         this.state.tabASelections,
@@ -265,7 +337,12 @@ class AlignmentView extends React.Component {
         });
       }
 
-      this.setState({ tabASelections: [], tabBSelections: [] });
+      this.setState({
+        tabASelections: [],
+        tabBSelections: [],
+        editingAlignment: null,
+        listRefreshNeeded: this.state.listRefreshNeeded + 1,
+      });
     };
 
     const languageChanged = (id, language) => {
@@ -394,21 +471,18 @@ class AlignmentView extends React.Component {
           </Grid>
           <Grid item xs={3}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <AutomagicButton
-                  id="auto-align"
-                  languageA={this.state.tabALanguage}
-                  languageB={this.state.tabBLanguage}
-                  onAlignmentUpdated={(updatedLanguages) => {
-                    this.setState({
-                      listRefreshNeeded: this.state.listRefreshNeeded + 1,
-                      alignmentUpdated: updatedLanguages
-                    });
-                  }}
-                >
-                  AI alignment
-                </AutomagicButton>
-              </Box>
+              <SmartAlignButton
+                id="smart-align"
+                languageA={this.state.tabALanguage}
+                languageB={this.state.tabBLanguage}
+                disabled={this.state.editingAlignment !== null}
+                onAlignmentUpdated={(updatedLanguages) => {
+                  this.setState({
+                    listRefreshNeeded: this.state.listRefreshNeeded + 1,
+                    alignmentUpdated: updatedLanguages
+                  });
+                }}
+              />
 
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Button
@@ -417,8 +491,18 @@ class AlignmentView extends React.Component {
                   disabled={linkDisabled}
                   onClick={createLink}
                 >
-                  Link selections
+                  {this.state.editingAlignment !== null
+                    ? "Update Alignment"
+                    : "Link selections"}
                 </Button>
+                {this.state.editingAlignment !== null && (
+                  <Button
+                    variant="outlined"
+                    onClick={cancelEdit}
+                  >
+                    Cancel Edit
+                  </Button>
+                )}
                 <FormControl disabled={linkDisabled} fullWidth>
                   <InputLabel id="category-select-label">Category</InputLabel>
                   <Select
@@ -447,16 +531,30 @@ class AlignmentView extends React.Component {
                     disablePadding
                     key={"list-alignment-" + index}
                     secondaryAction={
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => deleteAlignment(index)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <>
+                        <IconButton
+                          edge="end"
+                          aria-label="edit"
+                          onClick={() => editAlignment(index)}
+                          disabled={this.state.editingAlignment !== null}
+                          sx={{ mr: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          aria-label="delete"
+                          onClick={() => deleteAlignment(index)}
+                          disabled={this.state.editingAlignment !== null}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </>
                     }
                   >
-                    <ListItemButton>
+                    <ListItemButton
+                      selected={this.state.editingAlignment === index}
+                    >
                       <ListItemText
                         primary={`Alignment ${index + 1} (${alignment.category})`}
                         onMouseOut={() => hideAlignment(index)}
@@ -496,10 +594,10 @@ const AlignmentOnboarding = [
     },
   },
   {
-    element: "#auto-align",
+    element: "#smart-align",
     popover: {
-      title: "AI alignment",
-      description: "Let the system suggest links automatically.",
+      title: "Smart AI alignment",
+      description: "Use AI to automatically suggest alignment links between documents (client-side, 120MB model).",
     },
   },
   {

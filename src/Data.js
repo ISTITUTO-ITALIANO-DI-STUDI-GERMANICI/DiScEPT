@@ -1066,6 +1066,29 @@ class Data {
     this.#changed = true;
   }
 
+  updateAlignment(langA, langB, index, idsA, idsB, category = ALIGNMENT_CATEGORIES[0]) {
+    const a = this.#getAlignments(langA, langB);
+    if (!a || !a.alignments[index]) {
+      return;
+    }
+
+    this.#changed = true;
+
+    if (!a.swap) {
+      a.alignments[index] = {
+        a: idsA,
+        b: idsB,
+        category,
+      };
+    } else {
+      a.alignments[index] = {
+        a: idsB,
+        b: idsA,
+        category,
+      };
+    }
+  }
+
   addAlignment(langA, langB, idsA, idsB, category = ALIGNMENT_CATEGORIES[0]) {
     const a = this.#getAlignments(langA, langB);
     if (!a) {

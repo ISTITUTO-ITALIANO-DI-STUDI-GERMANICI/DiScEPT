@@ -13,7 +13,7 @@ export default function Title({ title, sx = {} }) {
       }}
     >
       <img
-        src="assets/logo.png"
+        src={`${process.env.PUBLIC_URL}/assets/logo.png`}
         alt="DiScEPT"
         style={{ height: 48, width: "auto" }}
       />

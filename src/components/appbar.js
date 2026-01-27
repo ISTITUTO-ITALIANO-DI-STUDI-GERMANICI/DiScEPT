@@ -64,7 +64,7 @@ export default function DisceptAppBar({
             onClick={() => onIntro && onIntro()}
           >
             <img
-              src="assets/logo.png"
+              src={`${process.env.PUBLIC_URL}/assets/logo.png`}
               alt="Logo"
               style={{ height: 32 }}
             />
