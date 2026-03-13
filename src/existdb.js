@@ -23,13 +23,13 @@ export async function listCollection(url, collection, user, password, proxy) {
       ? await proxyFetch(
           {
             url,
-            path: `/rest${collection}/`,
+            path: `/rest/${collection}/`,
             method: "GET",
             headers: fetchArgs.headers,
           },
           proxy,
         )
-      : await fetch(`${url}/rest${collection}/`, fetchArgs);
+      : await fetch(`${url}/rest/${collection}/`, fetchArgs);
     if (!res.ok) throw new Error("exist-list");
     const text = await res.text();
     const dom = new DOMParser().parseFromString(text, "text/xml");
@@ -49,13 +49,13 @@ export async function fetchFile(url, collection, name, user, password, proxy) {
       ? await proxyFetch(
           {
             url,
-            path: `/rest${collection}/${name}`,
+            path: `/rest/${collection}/${name}`,
             method: "GET",
             headers: fetchArgs.headers,
           },
           proxy,
         )
-      : await fetch(`${url}/rest${collection}/${name}`, fetchArgs);
+      : await fetch(`${url}/rest/${collection}/${name}`, fetchArgs);
     if (!res.ok) throw new Error("exist-fetch");
     return await res.text();
   } catch (e) {
@@ -83,14 +83,14 @@ export async function writeFile(
       ? await proxyFetch(
           {
             url,
-            path: `/rest${collection}/${name}`,
+            path: `/rest/${collection}/${name}`,
             method: "PUT",
             headers,
             body,
           },
           proxy,
         )
-      : await fetch(`${url}/rest${collection}/${name}`, {
+      : await fetch(`${url}/rest/${collection}/${name}`, {
           method: "PUT",
           headers,
           body,
