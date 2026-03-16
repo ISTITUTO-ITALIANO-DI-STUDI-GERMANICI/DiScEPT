@@ -1199,6 +1199,14 @@ class Data {
   async readFromExistDB(url, collection, user, password, proxy) {
     const files = await listCollection(url, collection, user, password, proxy);
     const parser = new DOMParser();
+
+    // Se ho un solo file faccio la lettura singola di esso
+    if (files.length === 1) {
+      const xml = await fetchFile(url, collection, files[0], user, password, proxy);
+      this.readFromString(xml);
+      return;
+    }
+
     const dom = parser.parseFromString(
       `<TEI xmlns="${TEI_NS}"><teiHeader/><standOff/></TEI>`,
       "text/xml",
@@ -1208,9 +1216,13 @@ class Data {
       const xml = await fetchFile(url, collection, name, user, password, proxy);
       const fileDom = parser.parseFromString(xml, "text/xml");
       if (!fileDom.firstElementChild) continue;
-      dom.documentElement.appendChild(
-        dom.importNode(fileDom.documentElement, true),
-      );
+
+      // Altrimenti vado a recuperare i dati per ogni figlio TEI presente nel corpus
+      Array.from(fileDom.firstElementChild.children)
+        .filter(child => child.tagName === "TEI")
+        .forEach(child => {
+          dom.documentElement.appendChild(dom.importNode(child, true));
+        });
     }
 
     const s = new XMLSerializer();
