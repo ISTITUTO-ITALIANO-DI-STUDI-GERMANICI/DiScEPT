@@ -58,7 +58,7 @@ export const TEI_VIEWER_CORE = {
     // Supports: Poetry (<l>), Prose (<p>, <ab>), Drama (<sp>, <stage>),
     // and Structural elements (<head>, <date>, <trailer>, <quote>, <note>)
     const allElements = Array.from(
-      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note")
+      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note, text w, text seg, text w, text seg")
     );
 
     // Helper function to process any text-bearing element
