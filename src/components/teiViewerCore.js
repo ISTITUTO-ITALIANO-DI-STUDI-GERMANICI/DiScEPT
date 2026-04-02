@@ -56,9 +56,10 @@ export const TEI_VIEWER_CORE = {
     // Query all common TEI text-bearing elements in a single selector
     // This preserves document order (important for heads before lines, etc.)
     // Supports: Poetry (<l>), Prose (<p>, <ab>), Drama (<sp>, <stage>),
-    // and Structural elements (<head>, <date>, <trailer>, <quote>, <note>)
+    // and Structural elements (<head>, <date>, <trailer>, <quote>, <note>),
+    // words (<w>) and segments (<seg>)
     const allElements = Array.from(
-      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note")
+      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note, text w, text seg")
     );
 
     // Helper function to process any text-bearing element
