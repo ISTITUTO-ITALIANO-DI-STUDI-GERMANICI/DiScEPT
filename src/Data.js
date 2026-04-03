@@ -1200,7 +1200,7 @@ class Data {
     const files = await listCollection(url, collection, user, password, proxy);
     const parser = new DOMParser();
 
-    // Se ho un solo file faccio la lettura singola di esso
+    // If I have a file only, I read it directly
     if (files.length === 1) {
       const xml = await fetchFile(url, collection, files[0], user, password, proxy);
       this.readFromString(xml);
@@ -1217,11 +1217,11 @@ class Data {
       const fileDom = parser.parseFromString(xml, "text/xml");
       if (!fileDom.firstElementChild) continue;
 
-      // Altrimenti vado a recuperare i dati per ogni figlio TEI presente nel corpus
+      // Otherwise I recover data for each TEI child inside the corpus
       Array.from(fileDom.firstElementChild.children)
-        .filter(child => child.tagName === "TEI")
+        .filter(child => child.tagName === "TEI")       // Getting all TEI children
         .forEach(child => {
-          dom.documentElement.appendChild(dom.importNode(child, true));
+          dom.documentElement.appendChild(dom.importNode(child, true));   // for each of them I import it into the main DOM
         });
     }
 
