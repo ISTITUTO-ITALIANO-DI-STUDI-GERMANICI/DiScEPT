@@ -848,7 +848,9 @@ class TEIAlignmentViewer extends HTMLElement {
 
       // Scroll to targets
       if (targets.length > 0) {
-        targets[0].scrollIntoView({ behavior: "smooth", block: "center" });
+        for(let i = 0; i < targets.length; i++) {
+          targets[i].scrollIntoView({ behavior: "smooth", block: "center" });
+        }
       }
 
       // Highlight using first actual segment ID so all partners get highlighted

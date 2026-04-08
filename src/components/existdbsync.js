@@ -6,11 +6,20 @@ import {
   DialogActions,
   TextField,
   Button,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import SyncIcon from "@mui/icons-material/Sync";
 import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
 import data from "../Data.js";
+
+const ERROR_MESSAGES = {
+  "exist-network": "Unable to connect to eXistDB. Please check URLs and your network.",
+  "exist-fetch": "Error occurred while fetching files from the collection.",
+  "exist-save": "Error occurred while saving the document to eXistDB.",
+  "exist-list": "Error occurred while fetching the file list from the collection.",
+};
 
 export default function ExistDBSync() {
   const [open, setOpen] = React.useState(false);
@@ -28,6 +37,21 @@ export default function ExistDBSync() {
     localStorage.getItem("exist-proxy") || "",
   );
 
+  const [snackbar, setSnackbar] = React.useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity) => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") return;
+    setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
   const savePrefs = () => {
     localStorage.setItem("exist-url", url);
     localStorage.setItem("exist-collection", collection);
@@ -35,23 +59,15 @@ export default function ExistDBSync() {
     localStorage.setItem("exist-proxy", proxy);
   };
 
-  const showError = (err) => {
-    const map = {
-      "exist-network": "Impossibile raggiungere eXistDB",
-      "exist-fetch": "Errore nel recupero dei file",
-      "exist-save": "Errore nel salvataggio dei dati",
-      "exist-list": "Errore nel recupero della collezione",
-    };
-    alert(map[err.message] || err.message);
-  };
-
   const load = async () => {
     savePrefs();
     try {
       await data.readFromExistDB(url, collection, user, password, proxy);
       setOpen(false);
+      showSnackbar("Document loaded correctly from eXistDB.", "success");
     } catch (e) {
-      showError(e);
+      const msg = ERROR_MESSAGES[e.message] || e.message;
+      showSnackbar(msg, "error");
     }
   };
 
@@ -60,8 +76,10 @@ export default function ExistDBSync() {
     try {
       await data.saveToExistDB(url, collection, user, password, proxy);
       setOpen(false);
+      showSnackbar("Document saved correctly on eXistDB.", "success");
     } catch (e) {
-      showError(e);
+      const msg = ERROR_MESSAGES[e.message] || e.message;
+      showSnackbar(msg, "error");
     }
   };
 
@@ -72,6 +90,7 @@ export default function ExistDBSync() {
           <SyncIcon />
         </IconButton>
       </Tooltip>
+
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>eXistDB Sync</DialogTitle>
         <DialogContent
@@ -117,6 +136,22 @@ export default function ExistDBSync() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 }

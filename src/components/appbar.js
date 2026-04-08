@@ -15,6 +15,7 @@ import HelpIcon from "@mui/icons-material/Help"; // Help icon, typically for an 
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ExistDBSync from "./existdbsync.js";
+import AutoSaveButton from "./autosavebutton.js"; // Restore button
 
 // Hidden input styled component for file upload input, visually hidden but still accessible for screen readers
 const VisuallyHiddenInput = styled("input")({
@@ -38,6 +39,7 @@ export default function DisceptAppBar({
   onToggleStepper,
   stepperOpen,
   onIntro,
+  onRestored,     // If it's restored
 }) {
   // Handles file upload event
   // Checks that only one file is selected, then triggers the fileUploaded callback with the selected file
@@ -97,6 +99,9 @@ export default function DisceptAppBar({
             </Tooltip>
 
             <ExistDBSync />
+
+            {/* Restore auto-saved work */}
+            <AutoSaveButton onRestored={onRestored} />
 
             {/* Help */}
             <Tooltip title="Aiuto">
