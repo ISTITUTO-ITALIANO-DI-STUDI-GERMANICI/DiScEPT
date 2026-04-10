@@ -1,8 +1,6 @@
 import * as React from "react";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -13,6 +11,7 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 
 import data from "../Data.js";
+import { useAlert } from "./alert/alert.js";
 
 // Lazy load transformers to avoid bundling it by default
 let transformersModule = null;
@@ -33,22 +32,13 @@ const loadTransformers = async () => {
  * Languages: 50+ including IT, DE, EN, FR, ES, etc.
  */
 export default function SmartAlignButton({ languageA, languageB, onAlignmentUpdated, disabled, ...props }) {
+
+  // Instead of snackBar now all alerts are handled from only a component
+  const dAlert = useAlert();
+
   const [loading, setLoading] = React.useState(false);
   const [downloadDialog, setDownloadDialog] = React.useState(false);
   const [downloadProgress, setDownloadProgress] = React.useState(0);
-  const [snackbar, setSnackbar] = React.useState({
-    open: false,
-    message: "",
-    severity: "info",
-  });
-
-  const showMessage = (message, severity = "info") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
 
   /**
    * Extract text elements from TEI document
@@ -59,7 +49,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
     const parserError = xmlDoc.querySelector("parsererror");
     if (parserError) {
-      throw new Error("Invalid XML");
+      dAlert("E09");
     }
 
     // Extract text-bearing elements (p, l, ab, head, etc.)
@@ -191,7 +181,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       env.allowRemoteModels = true;
 
       setDownloadProgress(20);
-      showMessage("Loading AI model... This may take 30-60 seconds on first use.", "info");
+      // I06 is the corrispective message in messages.json
+      dAlert("I06");
 
       // Track progress per file
       const fileProgress = {};
@@ -221,7 +212,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       );
 
       setDownloadProgress(70);
-      showMessage("Model loaded! Extracting text elements...", "info");
+      dAlert("I07");
 
       // Extract text elements from both documents
       const xmlA = data.getDocumentPerLanguage(languageA);
@@ -232,17 +223,21 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
       if (elementsA.length === 0 || elementsB.length === 0) {
         throw new Error("One or both documents have no text elements to align");
+        dAlert("E10");
       }
 
       setDownloadProgress(75);
-      showMessage(`Found ${elementsA.length} elements in ${languageA} and ${elementsB.length} in ${languageB}`, "info");
+      dAlert({
+        message: `Found ${elementsA.length} elements in ${languageA} and ${elementsB.length} in ${languageB}`,
+        severity: "info"
+      });
 
       // Ensure all elements have IDs
       elementsA = ensureIds(xmlA, languageA, elementsA);
       elementsB = ensureIds(xmlB, languageB, elementsB);
 
       setDownloadProgress(80);
-      showMessage("Computing sentence embeddings...", "info");
+      dAlert("I09");
 
       // Get embeddings for all sentences
       const textsA = elementsA.map(e => e.text);
@@ -252,7 +247,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       const embeddingsB = await extractor(textsB, { pooling: "mean", normalize: true });
 
       setDownloadProgress(90);
-      showMessage("Finding best alignments...", "info");
+      dAlert("I10");
 
       // Convert to arrays for easier processing
       const embArrayA = Array.from({ length: elementsA.length }, (_, i) => ({
@@ -291,17 +286,17 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         onAlignmentUpdated([languageA, languageB]);
       }
 
-      showMessage(
-        `Smart alignment complete! Created ${alignments.length} alignment${alignments.length !== 1 ? "s" : ""}.`,
-        "success"
-      );
+      dAlert({
+        message: `Smart alignment complete! Created ${alignments.length} alignment${alignments.length !== 1 ? "s" : ""}.`,
+        severity: "success"
+      });
 
     } catch (error) {
       console.error("Smart alignment error:", error);
-      showMessage(
-        `Alignment failed: ${error.message}. Please check your documents and try again.`,
-        "error"
-      );
+      dAlert({
+        message: `Alignment failed: ${error.message}. Please check your documents and try again.`,
+        severity: "error"
+      })
     } finally {
       setLoading(false);
       setTimeout(() => {
@@ -345,28 +340,6 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
           </DialogActions>
         )}
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{
-            width: "100%",
-            ...(snackbar.severity === "success" && {
-              backgroundColor: "#5E9278",
-              color: "#FFFFFF",
-            }),
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

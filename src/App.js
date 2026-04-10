@@ -9,6 +9,7 @@ import DisceptFileUploader from "./components/fileuploader.js";
 import Onboarding from "./components/onboarding.js";
 import PreventClosing from "./components/preventclosing.js";
 import Footer from "./components/footer.js";
+import { AlertProvider } from "./components/alert/alert.js"; // for managing alerts
 
 // Views and their onboarding components
 import { IntroView, IntroOnboarding } from "./views/intro.js";
@@ -112,49 +113,51 @@ class App extends React.Component {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        {/** Any component can use alerts in this way */}
+        <AlertProvider>
+          <DisceptAppBar
+            fileUploaded={fileUploaded}
+            onHelp={runOnboarding}
+            onToggleStepper={toggleStepper}
+            stepperOpen={this.state.stepperOpen}
+            onIntro={goToIntro}
+          />
 
-        <DisceptAppBar
-          fileUploaded={fileUploaded}
-          onHelp={runOnboarding}
-          onToggleStepper={toggleStepper}
-          stepperOpen={this.state.stepperOpen}
-          onIntro={goToIntro}
-        />
-
-        <Grid container spacing={2} sx={{ p: 3, position: "relative" }}>
-          <Grid
-            item
-            sx={{
-              width: this.state.stepperOpen ? 240 : 16,
-              transition: "width 0.2s ease",
-              mr: 3,
-            }}
-          >
-            <DisceptStepper
-              steps={steps}
-              onChange={changeStep}
-              onToggle={toggleStepper}
-              open={this.state.stepperOpen}
-            />
+          <Grid container spacing={2} sx={{ p: 3, position: "relative" }}>
+            <Grid
+              item
+              sx={{
+                width: this.state.stepperOpen ? 240 : 16,
+                transition: "width 0.2s ease",
+                mr: 3,
+              }}
+            >
+              <DisceptStepper
+                steps={steps}
+                onChange={changeStep}
+                onToggle={toggleStepper}
+                open={this.state.stepperOpen}
+              />
+            </Grid>
+            <Grid item xs>
+              <Item step={this.state.currentStep} />
+            </Grid>
           </Grid>
-          <Grid item xs>
-            <Item step={this.state.currentStep} />
-          </Grid>
-        </Grid>
 
-        <DisceptFileUploader
-          fileUploaded={this.state.fileUploaded}
-          onChange={() => changeStep(0)}
-        />
+          <DisceptFileUploader
+            fileUploaded={this.state.fileUploaded}
+            onChange={() => changeStep(0)}
+          />
 
-        <Onboarding
-          run={this.state.runOnboarding}
-          onCompleted={onboardingCompleted}
-          steps={steps[this.state.currentStep].onboarding}
-        />
+          <Onboarding
+            run={this.state.runOnboarding}
+            onCompleted={onboardingCompleted}
+            steps={steps[this.state.currentStep].onboarding}
+          />
 
-        <Footer />
-        <PreventClosing />
+          <Footer />
+          <PreventClosing />
+        </AlertProvider>
       </ThemeProvider>
     );
   }

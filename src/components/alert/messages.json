@@ -1,0 +1,174 @@
+{
+	"messages": [
+		{
+			"category": "error",
+			"messages": [
+				{
+					"code": "E01",
+					"name": "exist-network",
+					"text": "Unable to connect to eXistDB. Please check URLs and your network."
+				},
+				{
+					"code": "E02",
+					"name": "exist-fetch",
+					"text": "Error occurred while fetching files from the collection."
+				},
+				{
+					"code": "E03",
+					"name": "exist-auth",
+					"text": "Authentication failed for eXistDB. Please check your credentials."
+				},
+				{
+					"code": "E04",
+					"name": "exist-query",
+					"text": "Error executing query on eXistDB. Please check your query syntax and database state."
+				},
+				{
+					"code": "E05",
+					"name": "exist-save",
+					"text": "Error occurred while saving document to eXistDB. Please check your data and database state."
+				},
+				{
+					"code": "E06",
+					"name": "exist-load",
+					"text": "Error occurred during loading to eXistDB. Please check your connection and try again."
+				},
+				{
+					"code": "E07",
+					"name": "exist-list",
+					"text": "Error occurred while fetching the file list from the collection."
+				},
+				{
+					"code": "E08",
+					"name": "smart-align",
+					"text": "Error occurred during smart align. Please check your data and try again."
+				},
+				{
+					"code": "E09",
+					"name": "invalid-xml",
+					"text": "Invalid XML format. Please check your document."
+				},
+        {
+          "code": "E10",
+          "name": "no-text-to-align",
+          "text": "One or both documents have no text elements to align."
+        }
+			]
+		},
+		{
+			"category": "success",
+			"messages": [
+				{
+					"code": "S01",
+					"name": "exist-sync-success",
+					"text": "Document loaded correctly from eXistDB."
+				},
+				{
+					"code": "S02",
+					"name": "exist-query-success",
+					"text": "Query executed successfully on eXistDB."
+				},
+				{
+					"code": "S03",
+					"name": "exist-auth-success",
+					"text": "Successfully authenticated with eXistDB."
+				},
+				{
+					"code": "S04",
+					"name": "exist-connection-success",
+					"text": "Successfully connected to eXistDB."
+				},
+				{
+					"code": "S05",
+					"name": "exist-disconnection-success",
+					"text": "Successfully disconnected from eXistDB."
+				},
+				{
+					"code": "S06",
+					"name": "exist-save-success",
+					"text": "Document saved correctly to eXistDB."
+				},
+				{
+					"code": "S07",
+					"name": "smart-align-completed",
+					"text": "Successfully completed smart align."
+				}
+			]
+		},
+		{
+			"category": "info",
+			"messages": [
+				{
+					"code": "I01",
+					"name": "exist-sync-start",
+					"text": "Starting synchronization with eXistDB..."
+				},
+				{
+					"code": "I02",
+					"name": "exist-query-start",
+					"text": "Executing query on eXistDB..."
+				},
+				{
+					"code": "I03",
+					"name": "exist-auth-start",
+					"text": "Authenticating with eXistDB..."
+				},
+				{
+					"code": "I04",
+					"name": "exist-connection-start",
+					"text": "Connecting to eXistDB..."
+				},
+				{
+					"code": "I05",
+					"name": "exist-disconnection-start",
+					"text": "Disconnecting from eXistDB..."
+				},
+				{
+					"code": "I06",
+					"name": "smart-align-start",
+					"text": "Loading AI model... This may take 30-60 seconds on first use."
+				},
+				{
+					"code": "I07",
+					"name": "smart-align-model-loaded",
+					"text": "Model loaded! Extracting text elements..."
+				},
+        {
+          "code": "I08",
+          "name": "smart-align-aligning",
+          "text": "Aligning documents... This may take a few moments."
+        },
+        {
+          "code": "I09",
+          "name": "smart-align-computing-embeddings",
+          "text": "Computing sentence embeddings..."
+        },
+        {
+          "code": "I10",
+          "name": "smart-align-find",
+          "text": "Finding best alignments..."
+        }
+			]
+		},
+		{
+			"category": "warning",
+			"messages": [
+				{
+					"code": "W01",
+					"name": "exist-deprecated",
+					"text": "You are using a deprecated version of eXistDB. Please consider upgrading."
+				},
+				{
+					"code": "W02",
+					"name": "exist-slow-response",
+					"text": "eXistDB is responding slowly. This may indicate performance issues."
+				},
+				{
+					"code": "W03",
+					"name": "exist-unstable-connection",
+					"text": "Connection to eXistDB is unstable. Please check your network."
+				}
+			]
+		}
+	]
+}
