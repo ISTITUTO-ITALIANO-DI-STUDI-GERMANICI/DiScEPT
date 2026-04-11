@@ -40,6 +40,15 @@ const MODELS_INFO = [
     speed: "Moderate",
     bestFor: "Same coverage as E5 small, higher embedding quality",
   },
+  {
+    id: "Xenova/LaBSE",
+    short: "LaBSE",
+    size: "~500 MB",
+    languages: "109",
+    quality: "High",
+    speed: "Moderate",
+    bestFor: "Language-agnostic BERT — strong on rare and classical languages",
+  },
 ];
 
 export default function AboutAIDialog({ open, onClose }) {

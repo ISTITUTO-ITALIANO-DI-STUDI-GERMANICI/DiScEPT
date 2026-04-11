@@ -47,6 +47,14 @@ const AI_MODELS = [
     languages: "100 languages",
     prefix: "passage: ",
   },
+  {
+    id: "Xenova/LaBSE",
+    short: "LaBSE",
+    label: "LaBSE",
+    size: "~500 MB",
+    languages: "109 languages",
+    prefix: null,
+  },
 ];
 
 // Lazy load transformers to avoid bundling it by default
@@ -57,6 +65,9 @@ const loadTransformers = async () => {
   }
   return transformersModule;
 };
+
+// Session-level embedding cache: modelId -> Map<text, Float32Array>
+const embeddingCache = new Map();
 
 /**
  * SmartAlignButton Component
@@ -70,6 +81,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
   const [phase, setPhase] = React.useState("idle"); // idle | loading | computing | aligning | done
   const [embedProgress, setEmbedProgress] = React.useState({ done: 0, total: 0 });
   const [selectedModelId, setSelectedModelId] = React.useState(AI_MODELS[0].id);
+  const cancelledRef = React.useRef(false);
+  const [cancelling, setCancelling] = React.useState(false);
   const [aboutOpen, setAboutOpen] = React.useState(false);
   const [snackbar, setSnackbar] = React.useState({
     open: false,
@@ -245,6 +258,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
    * Main alignment function
    */
   const performAlignment = async () => {
+    cancelledRef.current = false;
+    setCancelling(false);
     setLoading(true);
     setDownloadDialog(true);
     setPhase("loading");
@@ -282,21 +297,49 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       setPhase("computing");
       setEmbedProgress({ done: 0, total });
 
-      // Compute embeddings in small batches, yielding between each so the
-      // browser can repaint and the progress counter stays responsive.
-      const BATCH_SIZE = 8;
+      // 512 tokens ≈ 1500 characters — pre-truncate so the tokenizer doesn't
+      // waste time on text the model would discard anyway.
+      const MAX_CHARS = 1500;
+      const truncate = (t) => t.length > MAX_CHARS ? t.slice(0, MAX_CHARS) : t;
+
+      // Per-model cache for this session.
+      if (!embeddingCache.has(selectedModel.id)) {
+        embeddingCache.set(selectedModel.id, new Map());
+      }
+      const modelCache = embeddingCache.get(selectedModel.id);
+
+      const BATCH_SIZE = 32;
       const computeEmbeddings = async (texts, offset) => {
-        const results = [];
-        for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-          const batch = texts.slice(i, i + BATCH_SIZE);
+        const results = new Array(texts.length);
+
+        // Separate cached from uncached
+        const uncachedIndices = [];
+        for (let i = 0; i < texts.length; i++) {
+          const cached = modelCache.get(texts[i]);
+          if (cached) {
+            results[i] = { data: cached };
+          } else {
+            uncachedIndices.push(i);
+          }
+        }
+
+        for (let b = 0; b < uncachedIndices.length; b += BATCH_SIZE) {
+          if (cancelledRef.current) throw new Error("cancelled");
+          const batchIndices = uncachedIndices.slice(b, b + BATCH_SIZE);
+          const batch = batchIndices.map(i => truncate(texts[i]));
           const output = await extractor(batch, { pooling: "mean", normalize: true });
           const dim = output.dims[1];
-          for (let j = 0; j < batch.length; j++) {
-            results.push({ data: Array.from(output.data.slice(j * dim, (j + 1) * dim)) });
+          for (let j = 0; j < batchIndices.length; j++) {
+            const embedding = Array.from(output.data.slice(j * dim, (j + 1) * dim));
+            modelCache.set(texts[batchIndices[j]], embedding);
+            results[batchIndices[j]] = { data: embedding };
           }
-          setEmbedProgress({ done: offset + i + batch.length, total });
+          setEmbedProgress({ done: offset + uncachedIndices[Math.min(b + BATCH_SIZE, uncachedIndices.length) - 1] + 1, total });
           await new Promise(resolve => setTimeout(resolve, 0));
         }
+
+        // Ensure final count is accurate (all cached = instant)
+        setEmbedProgress({ done: offset + texts.length, total });
         return results;
       };
 
@@ -332,15 +375,16 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       );
 
     } catch (error) {
-      console.error("Smart alignment error:", error);
-      showMessage(`Alignment failed: ${error.message}.`, "error");
+      if (error.message !== "cancelled") {
+        console.error("Smart alignment error:", error);
+        showMessage(`Alignment failed: ${error.message}.`, "error");
+      }
     } finally {
       setLoading(false);
-      setTimeout(() => {
-        setDownloadDialog(false);
-        setPhase("idle");
-        setEmbedProgress({ done: 0, total: 0 });
-      }, 1500);
+      setDownloadDialog(false);
+      setPhase("idle");
+      setEmbedProgress({ done: 0, total: 0 });
+      setCancelling(false);
     }
   };
 
@@ -389,10 +433,12 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         <DialogTitle>Smart Alignment</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            {phase === "loading" && `Loading model ${selectedModel.short} (${selectedModel.size})…`}
-            {phase === "computing" && `Computing embeddings: ${embedProgress.done} / ${embedProgress.total} texts`}
-            {phase === "aligning" && "Finding best alignments…"}
-            {phase === "done" && "Complete!"}
+            {cancelling
+              ? "Cancelling… waiting for current batch to finish."
+              : phase === "loading"   ? `Loading model ${selectedModel.short} (${selectedModel.size})…`
+              : phase === "computing" ? `Computing embeddings: ${embedProgress.done} / ${embedProgress.total} texts`
+              : phase === "aligning"  ? "Finding best alignments…"
+              : "Complete!"}
           </DialogContentText>
           <Box sx={{ width: "100%" }}>
             {phase === "loading" && <LinearProgress variant="indeterminate" />}
@@ -412,11 +458,20 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
             )}
           </Box>
         </DialogContent>
-        {phase === "done" && (
-          <DialogActions>
+        <DialogActions>
+          {phase !== "done" && (
+            <Button
+              color="error"
+              disabled={cancelling}
+              onClick={() => { cancelledRef.current = true; setCancelling(true); }}
+            >
+              {cancelling ? "Cancelling…" : "Cancel"}
+            </Button>
+          )}
+          {phase === "done" && (
             <Button onClick={() => setDownloadDialog(false)}>Close</Button>
-          </DialogActions>
-        )}
+          )}
+        </DialogActions>
       </Dialog>
 
       <Snackbar
