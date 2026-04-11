@@ -79,7 +79,7 @@ export default function DisceptAppBar({
 
             {/* Toggle stepper */}
             {onToggleStepper && (
-              <Tooltip title={stepperOpen ? "Nascondi menu" : "Mostra menu"}>
+              <Tooltip title={stepperOpen ? "Hide menu" : "Show menu"}>
                 <IconButton color="inherit" onClick={onToggleStepper}>
                   {stepperOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
                 </IconButton>
@@ -104,7 +104,7 @@ export default function DisceptAppBar({
             <AutoSaveButton onRestored={onRestored} />
 
             {/* Help */}
-            <Tooltip title="Aiuto">
+            <Tooltip title="Help">
               <IconButton id="help" color="inherit" onClick={onHelp}>
                 <HelpIcon />
               </IconButton>

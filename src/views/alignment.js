@@ -378,6 +378,14 @@ class AlignmentView extends React.Component {
       this.setState({ listRefreshNeeded: this.state.listRefreshNeeded + 1 });
     };
 
+    const scrollViewerTo = (container, element) => {
+      if (!container || !element) return;
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const newScrollTop = container.scrollTop + elementRect.top - containerRect.top - containerRect.height / 4;
+      container.scrollTo({ top: newScrollTop, behavior: "smooth" });
+    };
+
     const showAlignment = (index) => {
       const alignments = data.getAlignments(
         this.state.tabALanguage,
@@ -389,14 +397,18 @@ class AlignmentView extends React.Component {
 
       // Only highlight the specific alignment at the given index
       const alignment = alignments[index];
-      alignment.a
-        .map((id) => document.getElementById(id))
-        .filter((elm) => elm)
-        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
-      alignment.b
-        .map((id) => document.getElementById(id))
-        .filter((elm) => elm)
-        .forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+      const elmsA = alignment.a.map((id) => document.getElementById(id)).filter((elm) => elm);
+      const elmsB = alignment.b.map((id) => document.getElementById(id)).filter((elm) => elm);
+      elmsA.forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+      elmsB.forEach((elm) => elm.classList.add("previewAlignmentTEI"));
+
+      // Scroll each viewer to show the highlighted element
+      if (elmsA[0] && this.tabAref.current?.contentRef.current) {
+        scrollViewerTo(this.tabAref.current.contentRef.current, elmsA[0]);
+      }
+      if (elmsB[0] && this.tabBref.current?.contentRef.current) {
+        scrollViewerTo(this.tabBref.current.contentRef.current, elmsB[0]);
+      }
     };
 
     const hideAlignment = (index) => {
