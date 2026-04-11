@@ -196,6 +196,9 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       // Track progress per file
       const fileProgress = {};
 
+      // Use ONNX proxy worker to avoid blocking the main thread
+      env.backends.onnx.wasm.proxy = true;
+
       // Load the model with progress tracking
       const extractor = await pipeline(
         "feature-extraction",
@@ -241,27 +244,35 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       elementsA = ensureIds(xmlA, languageA, elementsA);
       elementsB = ensureIds(xmlB, languageB, elementsB);
 
-      setDownloadProgress(80);
       showMessage("Computing sentence embeddings...", "info");
 
-      // Get embeddings for all sentences
+      // Compute embeddings in small batches, yielding between each batch
+      // so the browser stays responsive and progress updates are visible.
+      const BATCH_SIZE = 8;
+      const computeEmbeddings = async (texts, progressStart, progressEnd) => {
+        const results = [];
+        for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+          const batch = texts.slice(i, i + BATCH_SIZE);
+          const output = await extractor(batch, { pooling: "mean", normalize: true });
+          const dim = output.dims[1];
+          for (let j = 0; j < batch.length; j++) {
+            results.push({ data: Array.from(output.data.slice(j * dim, (j + 1) * dim)) });
+          }
+          const pct = progressStart + ((i + batch.length) / texts.length) * (progressEnd - progressStart);
+          setDownloadProgress(Math.round(pct));
+          // Yield to the event loop so the browser can repaint
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        return results;
+      };
+
       const textsA = elementsA.map(e => e.text);
       const textsB = elementsB.map(e => e.text);
 
-      const embeddingsA = await extractor(textsA, { pooling: "mean", normalize: true });
-      const embeddingsB = await extractor(textsB, { pooling: "mean", normalize: true });
+      const embArrayA = await computeEmbeddings(textsA, 75, 87);
+      const embArrayB = await computeEmbeddings(textsB, 87, 95);
 
-      setDownloadProgress(90);
       showMessage("Finding best alignments...", "info");
-
-      // Convert to arrays for easier processing
-      const embArrayA = Array.from({ length: elementsA.length }, (_, i) => ({
-        data: Array.from(embeddingsA.data.slice(i * embeddingsA.dims[1], (i + 1) * embeddingsA.dims[1]))
-      }));
-
-      const embArrayB = Array.from({ length: elementsB.length }, (_, i) => ({
-        data: Array.from(embeddingsB.data.slice(i * embeddingsB.dims[1], (i + 1) * embeddingsB.dims[1]))
-      }));
 
       // Perform alignment
       const alignments = alignSentences(embArrayA, embArrayB);
