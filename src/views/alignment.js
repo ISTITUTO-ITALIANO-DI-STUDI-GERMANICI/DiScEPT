@@ -523,7 +523,7 @@ class AlignmentView extends React.Component {
                 </FormControl>
               </Box>
             </Box>
-            <List key={"list-" + this.state.listRefreshNeeded}>
+            <List key={"list-" + this.state.listRefreshNeeded} sx={{ maxHeight: "60vh", overflowY: "auto" }}>
               {data
                 .getAlignments(this.state.tabALanguage, this.state.tabBLanguage)
                 .map((alignment, index) => (
