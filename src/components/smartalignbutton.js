@@ -11,8 +11,51 @@ import DialogActions from "@mui/material/DialogActions";
 import LinearProgress from "@mui/material/LinearProgress";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 import data from "../Data.js";
+import AboutAIDialog from "./aboutaidialog.js";
+
+const AI_MODELS = [
+  {
+    id: "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
+    short: "MiniLM L12",
+    label: "MiniLM L12",
+    size: "~120 MB",
+    languages: "50 languages",
+    prefix: null,
+  },
+  {
+    id: "Xenova/multilingual-e5-small",
+    short: "E5 small",
+    label: "E5 small",
+    size: "~120 MB",
+    languages: "100 languages",
+    prefix: "passage: ",
+  },
+  {
+    id: "Xenova/multilingual-e5-base",
+    short: "E5 base",
+    label: "E5 base",
+    size: "~280 MB",
+    languages: "100 languages",
+    prefix: "passage: ",
+  },
+  {
+    id: "Xenova/LaBSE",
+    short: "LaBSE",
+    label: "LaBSE",
+    size: "~500 MB",
+    languages: "109 languages",
+    prefix: null,
+  },
+];
 
 // Lazy load transformers to avoid bundling it by default
 let transformersModule = null;
@@ -23,19 +66,24 @@ const loadTransformers = async () => {
   return transformersModule;
 };
 
+// Session-level embedding cache: modelId -> Map<text, Float32Array>
+const embeddingCache = new Map();
+
 /**
  * SmartAlignButton Component
  *
  * Performs client-side alignment using a multilingual sentence embedding model.
- * Downloads model on-demand (~120 MB) and caches it in the browser.
- *
- * Model: paraphrase-multilingual-MiniLM-L12-v2
- * Languages: 50+ including IT, DE, EN, FR, ES, etc.
+ * Downloads model on-demand and caches it in the browser.
  */
 export default function SmartAlignButton({ languageA, languageB, onAlignmentUpdated, disabled, ...props }) {
   const [loading, setLoading] = React.useState(false);
   const [downloadDialog, setDownloadDialog] = React.useState(false);
-  const [downloadProgress, setDownloadProgress] = React.useState(0);
+  const [phase, setPhase] = React.useState("idle"); // idle | loading | computing | aligning | done
+  const [embedProgress, setEmbedProgress] = React.useState({ done: 0, total: 0 });
+  const [selectedModelId, setSelectedModelId] = React.useState(AI_MODELS[0].id);
+  const cancelledRef = React.useRef(false);
+  const [cancelling, setCancelling] = React.useState(false);
+  const [aboutOpen, setAboutOpen] = React.useState(false);
   const [snackbar, setSnackbar] = React.useState({
     open: false,
     message: "",
@@ -104,38 +152,70 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
   };
 
   /**
-   * Align two sets of sentences using embeddings
+   * Align two sets of sentences using dynamic programming to find
+   * the optimal order-preserving (monotone) alignment.
+   *
+   * This is a Needleman-Wunsch-style DP: it maximises the total cosine
+   * similarity while guaranteeing that if A[i] aligns to B[j] and A[i']
+   * aligns to B[j'] with i' > i, then j' > j.
+   *
+   * Complexity: O(n * m) time and space — fine for ~200 × 200 elements.
    */
-  const alignSentences = (embeddingsA, embeddingsB) => {
-    const alignments = [];
-    const usedB = new Set();
+  const alignSentences = (embeddingsA, embeddingsB, threshold = 0.2) => {
+    const n = embeddingsA.length;
+    const m = embeddingsB.length;
 
-    // For each sentence in A, find best match in B
-    embeddingsA.forEach((embA, idxA) => {
-      let bestScore = -1;
-      let bestIdx = -1;
+    // Precompute full similarity matrix
+    const sim = Array.from({ length: n }, (_, i) =>
+      Array.from({ length: m }, (_, j) =>
+        cosineSimilarity(embeddingsA[i].data, embeddingsB[j].data)
+      )
+    );
 
-      embeddingsB.forEach((embB, idxB) => {
-        if (usedB.has(idxB)) return;
+    // dp[i][j] = best cumulative score aligning A[0..i-1] with B[0..j-1]
+    // Gap penalty = 0: skipping costs nothing but gains nothing either.
+    // A bad match (negative cosine) will therefore be skipped automatically.
+    const dp = Array.from({ length: n + 1 }, () => new Float32Array(m + 1));
+    // 0: match, 1: skipA, 2: skipB
+    const parent = Array.from({ length: n + 1 }, () => new Uint8Array(m + 1));
 
-        const similarity = cosineSimilarity(embA.data, embB.data);
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        const matchScore = dp[i - 1][j - 1] + sim[i - 1][j - 1];
+        const skipA     = dp[i - 1][j];
+        const skipB     = dp[i][j - 1];
 
-        if (similarity > bestScore) {
-          bestScore = similarity;
-          bestIdx = idxB;
+        if (matchScore >= skipA && matchScore >= skipB) {
+          dp[i][j] = matchScore;
+          parent[i][j] = 0; // match
+        } else if (skipA >= skipB) {
+          dp[i][j] = skipA;
+          parent[i][j] = 1; // skipA
+        } else {
+          dp[i][j] = skipB;
+          parent[i][j] = 2; // skipB
         }
-      });
-
-      // Only create alignment if similarity is above threshold
-      if (bestScore > 0.5 && bestIdx !== -1) {
-        alignments.push({
-          sourceIdx: idxA,
-          targetIdx: bestIdx,
-          score: bestScore
-        });
-        usedB.add(bestIdx);
       }
-    });
+    }
+
+    // Traceback
+    const alignments = [];
+    let i = n, j = m;
+    while (i > 0 && j > 0) {
+      switch (parent[i][j]) {
+        case 0: // match
+          if (sim[i - 1][j - 1] >= threshold) {
+            alignments.unshift({ sourceIdx: i - 1, targetIdx: j - 1, score: sim[i - 1][j - 1] });
+          }
+          i--; j--;
+          break;
+        case 1: // skipA
+          i--;
+          break;
+        default: // skipB
+          j--;
+      }
+    }
 
     return alignments;
   };
@@ -178,53 +258,26 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
    * Main alignment function
    */
   const performAlignment = async () => {
+    cancelledRef.current = false;
+    setCancelling(false);
     setLoading(true);
     setDownloadDialog(true);
+    setPhase("loading");
+    setEmbedProgress({ done: 0, total: 0 });
 
     try {
-      // Load transformers library
-      setDownloadProgress(10);
       const { pipeline, env } = await loadTransformers();
+      const selectedModel = AI_MODELS.find(m => m.id === selectedModelId) ?? AI_MODELS[0];
 
-      // Configure cache and progress
       env.allowLocalModels = false;
       env.allowRemoteModels = true;
-
-      setDownloadProgress(20);
-      showMessage("Loading AI model... This may take 30-60 seconds on first use.", "info");
-
-      // Track progress per file
-      const fileProgress = {};
-
-      // Use ONNX proxy worker to avoid blocking the main thread
       env.backends.onnx.wasm.proxy = true;
 
-      // Load the model with progress tracking
       const extractor = await pipeline(
         "feature-extraction",
-        "Xenova/paraphrase-multilingual-MiniLM-L12-v2",
-        {
-          progress_callback: (progress) => {
-            if (progress.status === "progress" && progress.file) {
-              // Track progress for each file separately
-              fileProgress[progress.file] = progress.progress || 0;
-
-              // Calculate average progress across all files
-              const files = Object.keys(fileProgress);
-              const avgProgress = files.reduce((sum, file) => sum + fileProgress[file], 0) / files.length;
-
-              // Map to 20-70% range
-              const percent = Math.min(20 + (avgProgress * 50), 70);
-              setDownloadProgress(percent);
-            } else if (progress.status === "done") {
-              setDownloadProgress(70);
-            }
-          }
-        }
+        selectedModel.id,
+        { progress_callback: () => {} }
       );
-
-      setDownloadProgress(70);
-      showMessage("Model loaded! Extracting text elements...", "info");
 
       // Extract text elements from both documents
       const xmlA = data.getDocumentPerLanguage(languageA);
@@ -237,67 +290,81 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         throw new Error("One or both documents have no text elements to align");
       }
 
-      setDownloadProgress(75);
-      showMessage(`Found ${elementsA.length} elements in ${languageA} and ${elementsB.length} in ${languageB}`, "info");
-
-      // Ensure all elements have IDs
       elementsA = ensureIds(xmlA, languageA, elementsA);
       elementsB = ensureIds(xmlB, languageB, elementsB);
 
-      showMessage("Computing sentence embeddings...", "info");
+      const total = elementsA.length + elementsB.length;
+      setPhase("computing");
+      setEmbedProgress({ done: 0, total });
 
-      // Compute embeddings in small batches, yielding between each batch
-      // so the browser stays responsive and progress updates are visible.
-      const BATCH_SIZE = 8;
-      const computeEmbeddings = async (texts, progressStart, progressEnd) => {
-        const results = [];
-        for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-          const batch = texts.slice(i, i + BATCH_SIZE);
+      // 512 tokens ≈ 1500 characters — pre-truncate so the tokenizer doesn't
+      // waste time on text the model would discard anyway.
+      const MAX_CHARS = 1500;
+      const truncate = (t) => t.length > MAX_CHARS ? t.slice(0, MAX_CHARS) : t;
+
+      // Per-model cache for this session.
+      if (!embeddingCache.has(selectedModel.id)) {
+        embeddingCache.set(selectedModel.id, new Map());
+      }
+      const modelCache = embeddingCache.get(selectedModel.id);
+
+      const BATCH_SIZE = 32;
+      const computeEmbeddings = async (texts, offset) => {
+        const results = new Array(texts.length);
+
+        // Separate cached from uncached
+        const uncachedIndices = [];
+        for (let i = 0; i < texts.length; i++) {
+          const cached = modelCache.get(texts[i]);
+          if (cached) {
+            results[i] = { data: cached };
+          } else {
+            uncachedIndices.push(i);
+          }
+        }
+
+        for (let b = 0; b < uncachedIndices.length; b += BATCH_SIZE) {
+          if (cancelledRef.current) throw new Error("cancelled");
+          const batchIndices = uncachedIndices.slice(b, b + BATCH_SIZE);
+          const batch = batchIndices.map(i => truncate(texts[i]));
           const output = await extractor(batch, { pooling: "mean", normalize: true });
           const dim = output.dims[1];
-          for (let j = 0; j < batch.length; j++) {
-            results.push({ data: Array.from(output.data.slice(j * dim, (j + 1) * dim)) });
+          for (let j = 0; j < batchIndices.length; j++) {
+            const embedding = Array.from(output.data.slice(j * dim, (j + 1) * dim));
+            modelCache.set(texts[batchIndices[j]], embedding);
+            results[batchIndices[j]] = { data: embedding };
           }
-          const pct = progressStart + ((i + batch.length) / texts.length) * (progressEnd - progressStart);
-          setDownloadProgress(Math.round(pct));
-          // Yield to the event loop so the browser can repaint
+          setEmbedProgress({ done: offset + uncachedIndices[Math.min(b + BATCH_SIZE, uncachedIndices.length) - 1] + 1, total });
           await new Promise(resolve => setTimeout(resolve, 0));
         }
+
+        // Ensure final count is accurate (all cached = instant)
+        setEmbedProgress({ done: offset + texts.length, total });
         return results;
       };
 
-      const textsA = elementsA.map(e => e.text);
-      const textsB = elementsB.map(e => e.text);
+      const prefix = selectedModel.prefix ?? "";
+      const textsA = elementsA.map(e => prefix + e.text);
+      const textsB = elementsB.map(e => prefix + e.text);
 
-      const embArrayA = await computeEmbeddings(textsA, 75, 87);
-      const embArrayB = await computeEmbeddings(textsB, 87, 95);
+      const embArrayA = await computeEmbeddings(textsA, 0);
+      const embArrayB = await computeEmbeddings(textsB, textsA.length);
 
-      showMessage("Finding best alignments...", "info");
+      setPhase("aligning");
+      await new Promise(resolve => setTimeout(resolve, 0));
 
-      // Perform alignment
       const alignments = alignSentences(embArrayA, embArrayB);
 
-      setDownloadProgress(95);
-
-      // Create alignments in data structure
       alignments.forEach(alignment => {
         const sourceId = elementsA[alignment.sourceIdx].id;
         const targetId = elementsB[alignment.targetIdx].id;
-
         if (sourceId && targetId) {
-          data.addAlignment(
-            languageA,
-            languageB,
-            [sourceId],
-            [targetId],
-            "Semantic" // Use semantic category for AI alignments
-          );
+          data.addAlignment(languageA, languageB, [sourceId], [targetId], "Semantic");
         }
       });
 
-      setDownloadProgress(100);
+      setPhase("done");
 
-      // Notify parent
       if (onAlignmentUpdated) {
         onAlignmentUpdated([languageA, languageB]);
       }
@@ -308,53 +375,103 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       );
 
     } catch (error) {
-      console.error("Smart alignment error:", error);
-      showMessage(
-        `Alignment failed: ${error.message}. Please check your documents and try again.`,
-        "error"
-      );
+      if (error.message !== "cancelled") {
+        console.error("Smart alignment error:", error);
+        showMessage(`Alignment failed: ${error.message}.`, "error");
+      }
     } finally {
       setLoading(false);
-      setTimeout(() => {
-        setDownloadDialog(false);
-        setDownloadProgress(0);
-      }, 1500);
+      setDownloadDialog(false);
+      setPhase("idle");
+      setEmbedProgress({ done: 0, total: 0 });
+      setCancelling(false);
     }
   };
 
+  const selectedModel = AI_MODELS.find(m => m.id === selectedModelId) ?? AI_MODELS[0];
+
   return (
     <>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <FormControl fullWidth size="small" disabled={disabled || loading}>
+        <InputLabel id="ai-model-label">AI Model</InputLabel>
+        <Select
+          labelId="ai-model-label"
+          value={selectedModelId}
+          label="Modello AI"
+          onChange={(e) => setSelectedModelId(e.target.value)}
+        >
+          {AI_MODELS.map(m => (
+            <MenuItem key={m.id} value={m.id}>
+              <Box>
+                <Typography variant="body2">{m.label}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {m.size} · {m.languages}
+                </Typography>
+              </Box>
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+        <Tooltip title="About AI models">
+          <IconButton size="small" onClick={() => setAboutOpen(true)}>
+            <InfoOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
       <Button
         variant="contained"
         disabled={disabled || loading || languageA === "" || languageB === ""}
         onClick={performAlignment}
         {...props}
       >
-        {loading ? <CircularProgress size="24px" /> : "Smart Align (AI, 120MB)"}
+        {loading ? <CircularProgress size="24px" /> : `Smart Align (AI, ${selectedModel.size})`}
       </Button>
 
       <Dialog open={downloadDialog} disableEscapeKeyDown>
         <DialogTitle>Smart Alignment</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            {downloadProgress < 70
-              ? "Downloading AI model (first use only, ~120 MB)..."
-              : downloadProgress < 100
-              ? "Processing alignment..."
+            {cancelling
+              ? "Cancelling… waiting for current batch to finish."
+              : phase === "loading"   ? `Loading model ${selectedModel.short} (${selectedModel.size})…`
+              : phase === "computing" ? `Computing embeddings: ${embedProgress.done} / ${embedProgress.total} texts`
+              : phase === "aligning"  ? "Finding best alignments…"
               : "Complete!"}
           </DialogContentText>
           <Box sx={{ width: "100%" }}>
-            <LinearProgress variant="determinate" value={downloadProgress} />
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-              {Math.round(downloadProgress)}%
-            </Typography>
+            {phase === "loading" && <LinearProgress variant="indeterminate" />}
+            {phase === "computing" && (
+              <>
+                <LinearProgress
+                  variant="determinate"
+                  value={embedProgress.total > 0 ? (embedProgress.done / embedProgress.total) * 100 : 0}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+                  {embedProgress.total > 0 ? Math.round((embedProgress.done / embedProgress.total) * 100) : 0}%
+                </Typography>
+              </>
+            )}
+            {(phase === "aligning" || phase === "done") && (
+              <LinearProgress variant={phase === "aligning" ? "indeterminate" : "determinate"} value={100} />
+            )}
           </Box>
         </DialogContent>
-        {downloadProgress === 100 && (
-          <DialogActions>
+        <DialogActions>
+          {phase !== "done" && (
+            <Button
+              color="error"
+              disabled={cancelling}
+              onClick={() => { cancelledRef.current = true; setCancelling(true); }}
+            >
+              {cancelling ? "Cancelling…" : "Cancel"}
+            </Button>
+          )}
+          {phase === "done" && (
             <Button onClick={() => setDownloadDialog(false)}>Close</Button>
-          </DialogActions>
-        )}
+          )}
+        </DialogActions>
       </Dialog>
 
       <Snackbar
@@ -378,6 +495,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <AboutAIDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </>
   );
 }
