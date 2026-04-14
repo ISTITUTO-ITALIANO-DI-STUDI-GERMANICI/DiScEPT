@@ -848,17 +848,31 @@ class TEIAlignmentViewer extends HTMLElement {
     }
   }
 
-  scrollToVerses(id) {
+scrollToVerses(id) {
     // Convert Set to Array for compatibility with existing code
     const partners = this.linkMap.get(id);
     const partnerIds = partners ? Array.from(partners) : [];
     const targets = [];
 
-    // I want to scroll only card-content and not all the page itself
-    const container = this.shadowRoot.querySelector('.card-content');
-
     // Clear all previous highlighting before highlighting new pair
     this.clearAllHighlighting();
+
+    // Scroll an element into view within its nearest .card-content ancestor,
+    // without affecting the outer page or iframe scroll position.
+    const scrollIntoCardContent = (element) => {
+      const container = element.closest('.card-content');
+      if (!container) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+
+      const offset = elementRect.top - containerRect.top;
+      // This will scroll smmothly both upside or downside
+      container.scrollTo({
+        top: container.scrollTop + offset - container.clientHeight / 2 + element.clientHeight / 2,
+        behavior: 'smooth'
+      });
+    };
 
     // For join IDs, we need to find the actual segment elements
     // The partnerIds array contains the resolved segment IDs
@@ -874,12 +888,8 @@ class TEIAlignmentViewer extends HTMLElement {
         if (element) targets.push(element);
       });
 
-      // Scroll to targets
-      if (targets.length > 0) {
-        for(let i = 0; i < targets.length; i++) {
-          targets[i].scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }
+      // Scroll each target within its own card-content column
+      targets.forEach(el => scrollIntoCardContent(el));
 
       // Highlight using first actual segment ID so all partners get highlighted
       this.highlight(firstSegmentId, true);
@@ -898,7 +908,9 @@ class TEIAlignmentViewer extends HTMLElement {
           if (partnerElement) targets.push(partnerElement);
         });
 
-        targets.forEach(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+        // Scroll each target within its own card-content column
+        targets.forEach(el => scrollIntoCardContent(el));
+
         this.highlight(id, true);
         setTimeout(() => {
           if (!this.locked.has(id)) this.highlight(id, false);
