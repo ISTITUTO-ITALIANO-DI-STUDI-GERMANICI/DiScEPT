@@ -3,6 +3,8 @@ import React from "react";
 import Grid from "@mui/material/Grid";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
+import Tabs from "@mui/material/Tabs";          // For adding a View tab
+import Tab from "@mui/material/Tab";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -18,6 +20,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AlignTab from "../components/aligntab.js";
 import SmartAlignButton from "../components/smartalignbutton.js";
 import Title from "../components/title.js";
+import AlignmentViewer from "../components/alignmentviewer.js";
 
 import data, { ALIGNMENT_CATEGORIES } from "../Data.js";
 
@@ -27,6 +30,7 @@ class AlignmentView extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+      mainTab: 0,           // 0 = Editor, 1 = View
       tabALanguage: "",
       tabASelections: [],
       tabARefreshNeeded: 0,
@@ -35,8 +39,8 @@ class AlignmentView extends React.Component {
       tabBRefreshNeeded: 0,
       listRefreshNeeded: 0,
       category: ALIGNMENT_CATEGORIES[0],
-      alignmentUpdated: [],  // Track updated languages
-      editingAlignment: null,  // Index of alignment being edited, null if not editing
+      alignmentUpdated: [], // Track updated languages
+      editingAlignment: null, // Index of alignment being edited, null if not editing
     };
 
     this.tabAref = React.createRef();
@@ -415,76 +419,92 @@ class AlignmentView extends React.Component {
       <Box>
         <Title title="Align the translations" />
 
-        <Grid container spacing={2}>
-          <Grid item xs={9}>
-            <Box
-              sx={{
-                bgcolor: "background.paper",
-                p: 2,
-                borderRadius: 8,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
-              }}
-            >
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <AlignTab
-                    id="tabA"
-                    ref={this.tabAref}
-                    alignmentUpdated={this.state.alignmentUpdated}
-                    onLanguageChanged={(language) =>
-                      languageChanged("tabA", language)
-                    }
-                    onSelectionChanged={(domElm, teiElm, rootElm) =>
-                      updateSelection("tabA", domElm, teiElm, rootElm)
-                    }
-                    onTokenize={() => tokenizeSelection("tabA")}
-                    onTokenizeAll={() => tokenizeAll("tabA")}
-                    onSelectAll={() => selectAll("tabA")}
-                    onDeselectAll={() => deselectAll("tabA")}
-                    hasSelection={tabAHasSelection}
-                    excludeLanguage={this.state.tabBLanguage}
-                    refreshNeeded={this.state.tabARefreshNeeded}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <AlignTab
-                    id="tabB"
-                    ref={this.tabBref}
-                    alignmentUpdated={this.state.alignmentUpdated}
-                    onLanguageChanged={(language) =>
-                      languageChanged("tabB", language)
-                    }
-                    onSelectionChanged={(domElm, teiElm, rootElm) =>
-                      updateSelection("tabB", domElm, teiElm, rootElm)
-                    }
-                    onTokenize={() => tokenizeSelection("tabB")}
-                    onTokenizeAll={() => tokenizeAll("tabB")}
-                    onSelectAll={() => selectAll("tabB")}
-                    onDeselectAll={() => deselectAll("tabB")}
-                    hasSelection={tabBHasSelection}
-                    excludeLanguage={this.state.tabALanguage}
-                    refreshNeeded={this.state.tabBRefreshNeeded}
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-          </Grid>
-          <Grid item xs={3}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <SmartAlignButton
-                id="smart-align"
-                languageA={this.state.tabALanguage}
-                languageB={this.state.tabBLanguage}
-                disabled={this.state.editingAlignment !== null}
-                onAlignmentUpdated={(updatedLanguages) => {
-                  this.setState({
-                    listRefreshNeeded: this.state.listRefreshNeeded + 1,
-                    alignmentUpdated: updatedLanguages
-                  });
-                }}
-              />
+        {/* Main tabs: Editor / View */}
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          <Tabs
+            value={this.state.mainTab}
+            onChange={(_, v) => this.setState({ mainTab: v })}
+            aria-label="alignment tabs"
+          >
+            <Tab label="Editor" id="alignment-tab-editor" />
+            <Tab label="View" id="alignment-tab-view" />
+          </Tabs>
+        </Box>
 
+        {/* ── EDITOR TAB ── */}
+        {this.state.mainTab === 0 && (
+          <Grid container spacing={2} alignItems="flex-start">
+            {/* Left panel: the two AlignTabs */}
+            <Grid item xs={12} md={9}>
+              <Box
+                sx={{
+                  bgcolor: "background.paper",
+                  p: 2,
+                  borderRadius: 8,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+                }}
+              >
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <AlignTab
+                      id="tabA"
+                      ref={this.tabAref}
+                      alignmentUpdated={this.state.alignmentUpdated}
+                      onLanguageChanged={(language) =>
+                        languageChanged("tabA", language)
+                      }
+                      onSelectionChanged={(domElm, teiElm, rootElm) =>
+                        updateSelection("tabA", domElm, teiElm, rootElm)
+                      }
+                      onTokenize={() => tokenizeSelection("tabA")}
+                      onTokenizeAll={() => tokenizeAll("tabA")}
+                      onSelectAll={() => selectAll("tabA")}
+                      onDeselectAll={() => deselectAll("tabA")}
+                      hasSelection={tabAHasSelection}
+                      excludeLanguage={this.state.tabBLanguage}
+                      refreshNeeded={this.state.tabARefreshNeeded}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <AlignTab
+                      id="tabB"
+                      ref={this.tabBref}
+                      alignmentUpdated={this.state.alignmentUpdated}
+                      onLanguageChanged={(language) =>
+                        languageChanged("tabB", language)
+                      }
+                      onSelectionChanged={(domElm, teiElm, rootElm) =>
+                        updateSelection("tabB", domElm, teiElm, rootElm)
+                      }
+                      onTokenize={() => tokenizeSelection("tabB")}
+                      onTokenizeAll={() => tokenizeAll("tabB")}
+                      onSelectAll={() => selectAll("tabB")}
+                      onDeselectAll={() => deselectAll("tabB")}
+                      hasSelection={tabBHasSelection}
+                      excludeLanguage={this.state.tabALanguage}
+                      refreshNeeded={this.state.tabBRefreshNeeded}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            </Grid>
+
+            {/* Right panel: controls + alignment list */}
+            <Grid item xs={12} md={3}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <SmartAlignButton
+                  id="smart-align"
+                  languageA={this.state.tabALanguage}
+                  languageB={this.state.tabBLanguage}
+                  disabled={this.state.editingAlignment !== null}
+                  onAlignmentUpdated={(updatedLanguages) => {
+                    this.setState({
+                      listRefreshNeeded: this.state.listRefreshNeeded + 1,
+                      alignmentUpdated: updatedLanguages
+                    });
+                  }}
+                />
+
                 <Button
                   id="alignment-link"
                   variant="contained"
@@ -522,50 +542,58 @@ class AlignmentView extends React.Component {
                   </Select>
                 </FormControl>
               </Box>
-            </Box>
-            <List key={"list-" + this.state.listRefreshNeeded}>
-              {data
-                .getAlignments(this.state.tabALanguage, this.state.tabBLanguage)
-                .map((alignment, index) => (
-                  <ListItem
-                    disablePadding
-                    key={"list-alignment-" + index}
-                    secondaryAction={
-                      <>
-                        <IconButton
-                          edge="end"
-                          aria-label="edit"
-                          onClick={() => editAlignment(index)}
-                          disabled={this.state.editingAlignment !== null}
-                          sx={{ mr: 1 }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          edge="end"
-                          aria-label="delete"
-                          onClick={() => deleteAlignment(index)}
-                          disabled={this.state.editingAlignment !== null}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </>
-                    }
-                  >
-                    <ListItemButton
-                      selected={this.state.editingAlignment === index}
+
+              <List key={"list-" + this.state.listRefreshNeeded}>
+                {data
+                  .getAlignments(this.state.tabALanguage, this.state.tabBLanguage)
+                  .map((alignment, index) => (
+                    <ListItem
+                      disablePadding
+                      key={"list-alignment-" + index}
+                      secondaryAction={
+                        <>
+                          <IconButton
+                            edge="end"
+                            aria-label="edit"
+                            onClick={() => editAlignment(index)}
+                            disabled={this.state.editingAlignment !== null}
+                            sx={{ mr: 1 }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={() => deleteAlignment(index)}
+                            disabled={this.state.editingAlignment !== null}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      }
                     >
-                      <ListItemText
-                        primary={`Alignment ${index + 1} (${alignment.category})`}
-                        onMouseOut={() => hideAlignment(index)}
-                        onMouseOver={() => showAlignment(index)}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-            </List>
+                      <ListItemButton
+                        selected={this.state.editingAlignment === index}
+                      >
+                        <ListItemText
+                          primary={`Alignment ${index + 1} (${alignment.category})`}
+                          onMouseOut={() => hideAlignment(index)}
+                          onMouseOver={() => showAlignment(index)}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+              </List>
+            </Grid>
           </Grid>
-        </Grid>
+        )}
+
+        {/* ── VIEW TAB ── */}
+        {this.state.mainTab === 1 && (
+          <AlignmentViewer
+            key={"viewer-" + this.state.listRefreshNeeded}
+          />
+        )}
       </Box>
     );
   }
@@ -577,6 +605,20 @@ const AlignmentOnboarding = [
       title: "Alignment section",
       description:
         "Select two languages, choose portions of text and link them together. You can categorize each link and even run an automatic alignment.",
+    },
+  },
+  {
+    element: "#alignment-tab-editor",
+    popover: {
+      title: "Editor tab",
+      description: "Select languages, pick text segments and create alignment links.",
+    },
+  },
+  {
+    element: "#alignment-tab-view",
+    popover: {
+      title: "View tab",
+      description: "Preview all aligned documents side by side with interactive highlighting.",
     },
   },
   {

@@ -62,11 +62,15 @@ class TEIAlignmentViewer extends HTMLElement {
     // Load embedded TEI from script tag
     const embeddedTEI = document.getElementById('embedded-tei');
     if (embeddedTEI) {
-      this.renderTEI(embeddedTEI.textContent);
+      // Read the embed flag injected by AlignmentViewer to suppress the title/author header.
+      // We use window.__DISCEPT_EMBED__ instead of location.search because blob: URLs
+      // do not support query strings — the browser would treat them as invalid.
+      const isEmbed = window.__DISCEPT_EMBED__ === true;
+      this.renderTEI(embeddedTEI.textContent, isEmbed);
     }
   }
 
-  renderTEI(xmlText) {
+  renderTEI(xmlText, isEmbed) {
     const parser = new DOMParser();
     const xml = parser.parseFromString(xmlText, "application/xml");
 
@@ -558,6 +562,19 @@ class TEIAlignmentViewer extends HTMLElement {
           margin-right: 0.5rem;
         }
       }
+
+      /* Embed-only overrides: applied when window.__DISCEPT_EMBED__ is true.
+         - card-content grows to fill the iframe height instead of being capped at
+           calc(100vh - 400px), which would be too short inside the iframe.
+         - sidebar matches the same uncapped height so columns stay even. */
+      :host(.embed-mode) .card-content {
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+      }
+
+      :host(.embed-mode) .sidebar {
+        max-height: calc(100vh - 120px);
+      }
     \`;
 
     const wrapper = document.createElement("div");
@@ -570,12 +587,15 @@ class TEIAlignmentViewer extends HTMLElement {
     // Count alignments
     const totalAlignments = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link")).length;
 
+    // When embedded inside the app (window.__DISCEPT_EMBED__ === true):
+    // - the decorative title and author are omitted from the header
+    // - the alignment count and format badge are kept so context is not lost
+    // - the embed-mode CSS class is applied to :host for the height overrides above
     wrapper.innerHTML = \`
       <div class="header">
         <div class="header-content">
-          <h2>\${title}</h2>
-          <p>\${author}</p>
-          <div class="header-meta">
+          \${isEmbed ? '' : \`<h2>\${title}</h2><p>\${author}</p>\`}
+          <div class="header-meta" \${isEmbed ? 'style="margin-top:0;padding-top:0;border-top:none;"' : ''}>
             <div class="header-meta-item">
               <span class="header-meta-label">Alignments:</span>
               <strong>\${totalAlignments}</strong>
@@ -589,6 +609,11 @@ class TEIAlignmentViewer extends HTMLElement {
       </div>
       <div class="content-wrapper"></div>
     \`;
+
+    // Apply the embed-mode class to :host so the CSS height overrides take effect
+    if (isEmbed) {
+      this.classList.add('embed-mode');
+    }
 
     const contentWrapper = wrapper.querySelector('.content-wrapper');
 
@@ -828,6 +853,9 @@ class TEIAlignmentViewer extends HTMLElement {
     const partners = this.linkMap.get(id);
     const partnerIds = partners ? Array.from(partners) : [];
     const targets = [];
+
+    // I want to scroll only card-content and not all the page itself
+    const container = this.shadowRoot.querySelector('.card-content');
 
     // Clear all previous highlighting before highlighting new pair
     this.clearAllHighlighting();

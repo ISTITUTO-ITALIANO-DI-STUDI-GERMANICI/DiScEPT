@@ -48,11 +48,11 @@
 					"name": "invalid-xml",
 					"text": "Invalid XML format. Please check your document."
 				},
-        {
-          "code": "E10",
-          "name": "no-text-to-align",
-          "text": "One or both documents have no text elements to align."
-        }
+				{
+					"code": "E10",
+					"name": "no-text-to-align",
+					"text": "One or both documents have no text elements to align."
+				}
 			]
 		},
 		{
@@ -133,21 +133,21 @@
 					"name": "smart-align-model-loaded",
 					"text": "Model loaded! Extracting text elements..."
 				},
-        {
-          "code": "I08",
-          "name": "smart-align-aligning",
-          "text": "Aligning documents... This may take a few moments."
-        },
-        {
-          "code": "I09",
-          "name": "smart-align-computing-embeddings",
-          "text": "Computing sentence embeddings..."
-        },
-        {
-          "code": "I10",
-          "name": "smart-align-find",
-          "text": "Finding best alignments..."
-        }
+				{
+					"code": "I08",
+					"name": "smart-align-aligning",
+					"text": "Aligning documents... This may take a few moments."
+				},
+				{
+					"code": "I09",
+					"name": "smart-align-computing-embeddings",
+					"text": "Computing sentence embeddings..."
+				},
+				{
+					"code": "I10",
+					"name": "smart-align-find",
+					"text": "Finding best alignments..."
+				}
 			]
 		},
 		{
