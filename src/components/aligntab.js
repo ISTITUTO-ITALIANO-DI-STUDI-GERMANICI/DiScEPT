@@ -154,8 +154,8 @@ class AlignTab extends React.Component {
         </FormControl>
 
         {/* View mode toggle */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", my: 1 }}>
-          <Box sx={{ display: "flex", gap: 1 }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 1, my: 1 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             <Button
               size="small"
               variant="outlined"
