@@ -12,6 +12,7 @@ import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
 import data from "../Data.js";
 import { useAlert } from "./alert/alert.js";
+import { MSG } from "./alert/messages.js";
 
 export default function ExistDBSync() {
 
@@ -43,9 +44,9 @@ export default function ExistDBSync() {
     try {
       await data.readFromExistDB(url, collection, user, password, proxy);
       setOpen(false);
-      dAlert("S01");
+      dAlert("SUCCESS.ExistDB.Sync");
     } catch (e) {
-      dAlert("E01");
+      dAlert("ERROR.ExistDB.Network");
     }
   };
 
@@ -54,9 +55,9 @@ export default function ExistDBSync() {
     try {
       await data.saveToExistDB(url, collection, user, password, proxy);
       setOpen(false);
-      dAlert("S06");
+      dAlert("SUCCESS.ExistDB.Save");
     } catch (e) {
-      dAlert("E05");
+      dAlert("ERROR.ExistDB.Save");
     }
   };
 

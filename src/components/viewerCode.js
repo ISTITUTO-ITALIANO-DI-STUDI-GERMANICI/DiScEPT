@@ -848,76 +848,76 @@ class TEIAlignmentViewer extends HTMLElement {
     }
   }
 
-scrollToVerses(id) {
-    // Convert Set to Array for compatibility with existing code
-    const partners = this.linkMap.get(id);
-    const partnerIds = partners ? Array.from(partners) : [];
-    const targets = [];
+  scrollToVerses(id) {
+      // Convert Set to Array for compatibility with existing code
+      const partners = this.linkMap.get(id);
+      const partnerIds = partners ? Array.from(partners) : [];
+      const targets = [];
 
-    // Clear all previous highlighting before highlighting new pair
-    this.clearAllHighlighting();
+      // Clear all previous highlighting before highlighting new pair
+      this.clearAllHighlighting();
 
-    // Scroll an element into view within its nearest .card-content ancestor,
-    // without affecting the outer page or iframe scroll position.
-    const scrollIntoCardContent = (element) => {
-      const container = element.closest('.card-content');
-      if (!container) return;
+      // Scroll an element into view within its nearest .card-content ancestor,
+      // without affecting the outer page or iframe scroll position.
+      const scrollIntoCardContent = (element) => {
+        const container = element.closest('.card-content');
+        if (!container) return;
 
-      const containerRect = container.getBoundingClientRect();
-      const elementRect = element.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
 
-      const offset = elementRect.top - containerRect.top;
-      // This will scroll smmothly both upside or downside
-      container.scrollTo({
-        top: container.scrollTop + offset - container.clientHeight / 2 + element.clientHeight / 2,
-        behavior: 'smooth'
-      });
-    };
+        const offset = elementRect.top - containerRect.top;
+        // This will scroll smmothly both upside or downside
+        container.scrollTo({
+          top: container.scrollTop + offset - container.clientHeight / 2 + element.clientHeight / 2,
+          behavior: 'smooth'
+        });
+      };
 
-    // For join IDs, we need to find the actual segment elements
-    // The partnerIds array contains the resolved segment IDs
-    if (partnerIds.length > 0) {
-      // Highlight using the first segment ID in the join's partner list
-      // This will trigger highlighting of all connected segments
-      const firstSegmentId = partnerIds[0];
+      // For join IDs, we need to find the actual segment elements
+      // The partnerIds array contains the resolved segment IDs
+      if (partnerIds.length > 0) {
+        // Highlight using the first segment ID in the join's partner list
+        // This will trigger highlighting of all connected segments
+        const firstSegmentId = partnerIds[0];
 
-      // Collect all elements to scroll to
-      const allIds = [id, ...partnerIds];
-      allIds.forEach(elementId => {
-        const element = this.shadowRoot.getElementById(elementId);
-        if (element) targets.push(element);
-      });
-
-      // Scroll each target within its own card-content column
-      targets.forEach(el => scrollIntoCardContent(el));
-
-      // Highlight using first actual segment ID so all partners get highlighted
-      this.highlight(firstSegmentId, true);
-      setTimeout(() => {
-        if (!this.locked.has(firstSegmentId)) this.highlight(firstSegmentId, false);
-      }, 2000);
-    } else {
-      // Regular element (not a join)
-      const element = this.shadowRoot.getElementById(id);
-      if (element) {
-        targets.push(element);
-
-        // Find all partner elements
-        partnerIds.forEach(partnerId => {
-          const partnerElement = this.shadowRoot.getElementById(partnerId);
-          if (partnerElement) targets.push(partnerElement);
+        // Collect all elements to scroll to
+        const allIds = [id, ...partnerIds];
+        allIds.forEach(elementId => {
+          const element = this.shadowRoot.getElementById(elementId);
+          if (element) targets.push(element);
         });
 
         // Scroll each target within its own card-content column
         targets.forEach(el => scrollIntoCardContent(el));
 
-        this.highlight(id, true);
+        // Highlight using first actual segment ID so all partners get highlighted
+        this.highlight(firstSegmentId, true);
         setTimeout(() => {
-          if (!this.locked.has(id)) this.highlight(id, false);
+          if (!this.locked.has(firstSegmentId)) this.highlight(firstSegmentId, false);
         }, 2000);
+      } else {
+        // Regular element (not a join)
+        const element = this.shadowRoot.getElementById(id);
+        if (element) {
+          targets.push(element);
+
+          // Find all partner elements
+          partnerIds.forEach(partnerId => {
+            const partnerElement = this.shadowRoot.getElementById(partnerId);
+            if (partnerElement) targets.push(partnerElement);
+          });
+
+          // Scroll each target within its own card-content column
+          targets.forEach(el => scrollIntoCardContent(el));
+
+          this.highlight(id, true);
+          setTimeout(() => {
+            if (!this.locked.has(id)) this.highlight(id, false);
+          }, 2000);
+        }
       }
     }
-  }
 }
 
 customElements.define('tei-alignment-viewer', TEIAlignmentViewer);

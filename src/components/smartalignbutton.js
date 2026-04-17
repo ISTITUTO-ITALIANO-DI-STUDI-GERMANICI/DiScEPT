@@ -12,6 +12,7 @@ import Box from "@mui/material/Box";
 
 import data from "../Data.js";
 import { useAlert } from "./alert/alert.js";
+import { MSG } from "./alert/messages.js";
 
 // Lazy load transformers to avoid bundling it by default
 let transformersModule = null;
@@ -49,7 +50,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
     const parserError = xmlDoc.querySelector("parsererror");
     if (parserError) {
-      dAlert("E09");
+      dAlert("ERROR.Alignment.InvalidXML");
     }
 
     // Extract text-bearing elements (p, l, ab, head, etc.)
@@ -181,8 +182,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       env.allowRemoteModels = true;
 
       setDownloadProgress(20);
-      // I06 is the corrispective message in messages.json
-      dAlert("I06");
+      dAlert("INFO.Alignment.SmartAlign.Start");
 
       // Track progress per file
       const fileProgress = {};
@@ -212,7 +212,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       );
 
       setDownloadProgress(70);
-      dAlert("I07");
+      dAlert("INFO.Alignment.SmartAlign.ModelLoaded");
 
       // Extract text elements from both documents
       const xmlA = data.getDocumentPerLanguage(languageA);
@@ -222,22 +222,20 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       let elementsB = extractTextElements(xmlB);
 
       if (elementsA.length === 0 || elementsB.length === 0) {
+        dAlert("ERROR.Alignment.NoTextToAlign");
         throw new Error("One or both documents have no text elements to align");
-        dAlert("E10");
       }
 
       setDownloadProgress(75);
-      dAlert({
-        message: `Found ${elementsA.length} elements in ${languageA} and ${elementsB.length} in ${languageB}`,
-        severity: "info"
-      });
+      dAlert(MSG.SUCCESS.Alignment.Completed(elementsA.length, languageA, elementsB.length, languageB));
+
 
       // Ensure all elements have IDs
       elementsA = ensureIds(xmlA, languageA, elementsA);
       elementsB = ensureIds(xmlB, languageB, elementsB);
 
       setDownloadProgress(80);
-      dAlert("I09");
+      dAlert("INFO.Alignment.SmartAlign.ComputingEmbeddings");
 
       // Get embeddings for all sentences
       const textsA = elementsA.map(e => e.text);
@@ -247,7 +245,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       const embeddingsB = await extractor(textsB, { pooling: "mean", normalize: true });
 
       setDownloadProgress(90);
-      dAlert("I10");
+      dAlert("INFO.Alignment.SmartAlign.Find");
 
       // Convert to arrays for easier processing
       const embArrayA = Array.from({ length: elementsA.length }, (_, i) => ({
@@ -286,17 +284,11 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         onAlignmentUpdated([languageA, languageB]);
       }
 
-      dAlert({
-        message: `Smart alignment complete! Created ${alignments.length} alignment${alignments.length !== 1 ? "s" : ""}.`,
-        severity: "success"
-      });
+      dAlert(MSG.SUCCESS.Alignment.Completed(alignments.length));
 
     } catch (error) {
       console.error("Smart alignment error:", error);
-      dAlert({
-        message: `Alignment failed: ${error.message}. Please check your documents and try again.`,
-        severity: "error"
-      })
+      dAlert(MSG.ERROR.Alignment.SmartAlign(error));
     } finally {
       setLoading(false);
       setTimeout(() => {
