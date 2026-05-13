@@ -30,6 +30,7 @@ export const MSG = {
       Completed: (alignmentsLength) => `Smart alignment complete! Created ${alignmentsLength} alignment${alignmentsLength !== 1 ? `s` : ``}.`,
     },
     Translations: {
+      LanguageAdded: `Language added successfully.`,
       LanguageEdited: `Language edited successfully.`,
       LanguageDeleted: `Language deleted successfully from the project.`
     },

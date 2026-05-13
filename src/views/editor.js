@@ -8,6 +8,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import IconButton from "@mui/material/IconButton";
+import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import Button from "@mui/material/Button";
@@ -49,14 +50,52 @@ const documentTemplate = (
  </text>
 </TEI>`;
 
+/**   Replaces all occurrences of the old language identifier inside a TEI XML string:
+ *      - <p>{oldLang}</p>  inside <publicationStmt>
+ *      - <language ident="{oldLang}">{oldLang}</language>
+ */
+function renameLangInTei(teiContent, oldLang, newLang) {
+  let updated = teiContent;
+
+  // Replaces the language in <publicationStmt><p>...</p></publicationStmt>
+  updated = updated.replace(
+    new RegExp(`(<publicationStmt>[\\s\\S]*?<p>)${escapeRegex(oldLang)}(<\\/p>[\\s\\S]*?<\\/publicationStmt>)`),
+    `$1${newLang}$2`,
+  );
+
+  // Replaces the language in <language ident="...">...</language>
+  updated = updated.replace(
+    new RegExp(`(<language\\s+ident=")${escapeRegex(oldLang)}(">)${escapeRegex(oldLang)}(<\\/language>)`),
+    `$1${newLang}$2${newLang}$3`,
+  );
+
+  dAlert(MSG.SUCCESS.Translations.EditLanguage);
+
+  return updated;
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function EditorView() {
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     data.getDocumentLanguages()[0],
   );
+
+  // Delete state
   const [deletingLanguage, setDeletingLanguage] = React.useState("");
+
+  // Add state
   const [addLanguageDialogShown, setAddLanguageDialogShown] =
     React.useState(false);
   const [addingLanguage, setAddingLanguage] = React.useState("");
+
+  // Edit state
+  const [editingLanguage, setEditingLanguage] = React.useState("");
+  const [editedLanguage, setEditedLanguage] = React.useState("");
+
+  // Delete handlers
 
   function deleteLanguage(language) {
     setDeletingLanguage(language);
@@ -75,6 +114,8 @@ function EditorView() {
       setSelectedLanguage(languages.length ? languages[0] : "");
     }
   }
+
+  // Add handlers
 
   function showAddLanguageDialog() {
     setAddLanguageDialogShown(true);
@@ -96,6 +137,43 @@ function EditorView() {
     }
   }
 
+  // Edit handlers
+
+  function showEditLanguageDialog(language) {
+    setEditingLanguage(language);
+    setEditedLanguage(language);
+  }
+
+  function closeEditLanguageDialog() {
+    setEditingLanguage("");
+    setEditedLanguage("");
+  }
+
+  function editLanguageConfirmed() {
+    const oldLang = editingLanguage;
+    const newLang = editedLanguage.trim();
+
+    closeEditLanguageDialog();
+
+    if (!newLang || newLang === oldLang) return;
+    if (data.getDocumentPerLanguage(newLang)) return; // already exists
+
+    // Get the existing TEI content and patch the language identifiers
+    const existingContent = data.getDocumentPerLanguage(oldLang);
+    const updatedContent = renameLangInTei(existingContent, oldLang, newLang);
+
+    // Removes the old key, add the new one with updated content
+    data.deleteDocumentPerLanguage(oldLang);
+    data.addDocumentPerLanguage(newLang, updatedContent);
+
+    // Keep selection in sync
+    if (selectedLanguage === oldLang) {
+      setSelectedLanguage(newLang);
+    }
+  }
+
+  // Render
+
   return (
     <Grid container spacing={3}>
       <Grid item xs={9}>
@@ -116,13 +194,23 @@ function EditorView() {
               key={"list-language-" + index}
               id={"list-language-" + index}
               secondaryAction={
-                <IconButton
-                  edge="end"
-                  aria-label="delete"
-                  onClick={() => deleteLanguage(language)}
-                >
-                  <DeleteIcon />
-                </IconButton>
+                <>
+                  <IconButton
+                    edge="end"
+                    aria-label="edit"
+                    onClick={() => showEditLanguageDialog(language)}
+                    sx={{ mr: 1 }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => deleteLanguage(language)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </>
               }
             >
               <ListItemButton
@@ -148,6 +236,7 @@ function EditorView() {
         </List>
       </Grid>
 
+      {/* Delete dialog */}
       <Dialog
         open={deletingLanguage !== ""}
         onClose={closeDeleteDialog}
@@ -171,6 +260,7 @@ function EditorView() {
         </DialogActions>
       </Dialog>
 
+      {/* Add dialog */}
       <Dialog
         open={addLanguageDialogShown}
         onClose={closeAddLanguageDialog}
@@ -202,6 +292,40 @@ function EditorView() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog
+        open={editingLanguage !== ""}
+        onClose={closeEditLanguageDialog}
+        aria-labelledby="edit-language"
+        aria-describedby="edit-language-desc"
+      >
+        <DialogTitle id="edit-language">{"Edit a language"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="edit-language-desc">
+            Enter the new language identifier for the current document.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            required
+            margin="dense"
+            id="edit-language-field"
+            name="language"
+            label="Language"
+            type="text"
+            fullWidth
+            variant="standard"
+            value={editedLanguage}
+            onChange={(e) => setEditedLanguage(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeEditLanguageDialog}>Cancel</Button>
+          <Button onClick={editLanguageConfirmed} autoFocus>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 }
@@ -221,7 +345,7 @@ const EditorOnboarding = [
       description: "Create a new TEI document for another language.",
     },
   },
-  // TODO: dynamci add a language if needed
+  // TODO: dynamic add a language if needed
 ];
 
 export { EditorView, EditorOnboarding };
