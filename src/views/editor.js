@@ -69,8 +69,6 @@ function renameLangInTei(teiContent, oldLang, newLang) {
     `$1${newLang}$2${newLang}$3`,
   );
 
-  dAlert(MSG.SUCCESS.Translations.EditLanguage);
-
   return updated;
 }
 
