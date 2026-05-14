@@ -22,6 +22,8 @@ import TextField from "@mui/material/TextField";
 import EditorTab from "../components/editortab.js";
 import Title from '../components/title.js';
 import data from "../Data.js";
+import { useAlert } from "../components/alert/alert.js";
+import { MSG } from "../components/alert/messages";
 
 const documentTemplate = (
   language,
@@ -77,6 +79,8 @@ function escapeRegex(str) {
 }
 
 function EditorView() {
+  const dAlert = useAlert();
+
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     data.getDocumentLanguages()[0],
   );
@@ -111,6 +115,8 @@ function EditorView() {
       const languages = data.getDocumentLanguages();
       setSelectedLanguage(languages.length ? languages[0] : "");
     }
+
+    dAlert("SUCCESS.Translations.LanguageDeleted");
   }
 
   // Add handlers
@@ -124,6 +130,11 @@ function EditorView() {
   }
 
   function addLanguage() {
+    if (!addingLanguage.trim()) {
+      dAlert("WARN.Translations.EmptyLanguageField");
+      return;
+    }
+
     closeAddLanguageDialog();
 
     if (!data.getDocumentPerLanguage(addingLanguage)) {
@@ -132,6 +143,7 @@ function EditorView() {
         documentTemplate(addingLanguage),
       );
       setSelectedLanguage(addingLanguage);
+      dAlert("SUCCESS.Translations.LanguageAdded");
     }
   }
 
@@ -151,9 +163,14 @@ function EditorView() {
     const oldLang = editingLanguage;
     const newLang = editedLanguage.trim();
 
+    if (!newLang) {
+      dAlert("WARN.Translations.EmptyLanguageField");
+      return;
+    }
+
     closeEditLanguageDialog();
 
-    if (!newLang || newLang === oldLang) return;
+    if (newLang === oldLang) return;
     if (data.getDocumentPerLanguage(newLang)) return; // already exists
 
     // Get the existing TEI content and patch the language identifiers
@@ -168,6 +185,8 @@ function EditorView() {
     if (selectedLanguage === oldLang) {
       setSelectedLanguage(newLang);
     }
+
+    dAlert("SUCCESS.Translations.LanguageEdited");
   }
 
   // Render
