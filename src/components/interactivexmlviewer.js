@@ -343,6 +343,7 @@ export default class InteractiveXMLViewer extends React.Component {
             borderRadius: '4px',
             overflowX: 'auto',
             maxHeight: '70vh',
+            maxWidth: '70vw',
             overflowY: 'auto',
             whiteSpace: 'pre-wrap'
           }}

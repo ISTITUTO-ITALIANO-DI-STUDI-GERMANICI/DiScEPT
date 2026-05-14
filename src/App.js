@@ -1,4 +1,5 @@
 import * as React from "react"; // Import the React library
+import Box from "@mui/material/Box";  // Added Box support fo preventing layout bug
 import Grid from "@mui/material/Grid"; // Import Grid component from Material-UI
 import { ThemeProvider, CssBaseline } from '@mui/material';
 
@@ -123,7 +124,8 @@ class App extends React.Component {
             onIntro={goToIntro}
           />
 
-          <Grid container spacing={2} sx={{ p: 3, position: "relative" }}>
+          {/* It's better a Flex Box here (in a single line without wrapping) for preventing the UI going down for any reason */}
+          <Box container spacing={2} sx={{ p: 3, display: "flex", flexWrap: "no-wrap", position: "relative" }}>
             <Grid
               item
               sx={{
@@ -142,7 +144,7 @@ class App extends React.Component {
             <Grid item xs>
               <Item step={this.state.currentStep} />
             </Grid>
-          </Grid>
+          </Box>
 
           <DisceptFileUploader
             fileUploaded={this.state.fileUploaded}
