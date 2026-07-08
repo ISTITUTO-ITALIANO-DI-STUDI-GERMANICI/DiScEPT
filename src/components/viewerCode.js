@@ -487,6 +487,66 @@ class TEIAlignmentViewer extends HTMLElement {
         display: none;
       }
 
+      /* Inline word tokens (word-level alignment) */
+      .word {
+        display: inline;
+        border-radius: 3px;
+        padding: 0 1px;
+        transition: background 0.12s ease;
+      }
+      .word.aligned {
+        cursor: pointer;
+        border-bottom: 1px dotted var(--text-tertiary);
+      }
+      .word.aligned:hover {
+        border-bottom-color: var(--accent-primary);
+      }
+      .word.hover-highlight {
+        background: var(--accent-light);
+      }
+      .word.locked {
+        background: var(--accent-light);
+        box-shadow: 0 0 0 2px var(--accent-primary) inset;
+        font-weight: 600;
+      }
+      /* line-level hover when no word tokens */
+      .verse.hover-highlight {
+        background: var(--accent-light);
+      }
+
+      /* Section controls (cantica / canto) */
+      .main-col {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+      }
+      .controls-label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+      .controls select {
+        padding: 0.4rem 0.6rem;
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-sm);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+
       /* Animations */
       @keyframes fadeIn {
         from {
@@ -624,32 +684,7 @@ class TEIAlignmentViewer extends HTMLElement {
     const sidebarLinks = document.createElement("div");
     sidebarLinks.className = "sidebar-links";
 
-    // Get links for sidebar
-    const links = Array.from(xml.querySelectorAll("linkGrp[type='translation'] > link"));
-    links.forEach((link, idx) => {
-      const targets = link.getAttribute("target");
-      if (!targets) return;
-      const [id1, id2] = targets.split(" ").map(s => s.replace("#", ""));
-
-      // Generate preview text for the link
-      const element1 = xml.querySelector(\`*[xml\\\\:id="\${id1}"]\`) || xml.getElementById(id1);
-      let linkText = \`Alignment \${idx + 1}\`;
-      if (element1) {
-        const previewText = element1.textContent.trim().substring(0, 30);
-        linkText = previewText.length > 30 ? previewText + "..." : previewText;
-      }
-
-      const a = document.createElement("a");
-      a.href = \`#\${id1}\`;
-      a.textContent = linkText;
-      a.title = \`Scroll to alignment pair \${idx + 1}\`; // Tooltip
-      a.onclick = e => {
-        e.preventDefault();
-        this.scrollToVerses(id1);
-      };
-      sidebarLinks.appendChild(a);
-    });
-
+    // Sidebar links are (re)populated per visible section by populateSidebar() below.
     sidebar.appendChild(sidebarLinks);
 
     const cards = document.createElement("div");
@@ -657,7 +692,16 @@ class TEIAlignmentViewer extends HTMLElement {
 
     // Helper function to add interaction events to aligned elements (click-only)
     const viewer = this; // Capture 'this' reference for use in nested functions
-    const addInteractionEvents = (element, id) => {
+    const addInteractionEvents = (element, id, opts) => {
+      const allowHover = !opts || opts.hover !== false;
+      if (allowHover) {
+        element.addEventListener("mouseenter", () => {
+          if (!viewer.locked.has(id)) viewer.hoverHighlight(id, true);
+        });
+        element.addEventListener("mouseleave", () => {
+          if (!viewer.locked.has(id)) viewer.hoverHighlight(id, false);
+        });
+      }
       element.addEventListener("click", (event) => {
         event.stopPropagation(); // Prevent event bubbling
 
@@ -666,8 +710,9 @@ class TEIAlignmentViewer extends HTMLElement {
           viewer.locked.delete(id);
           viewer.highlight(id, false);
         } else {
-          // Clear all previous highlighting before locking new pair
+          // Single locked selection at a time
           viewer.clearAllHighlighting();
+          viewer.locked.clear();
           viewer.locked.add(id);
           viewer.highlight(id, true);
         }
@@ -696,28 +741,51 @@ class TEIAlignmentViewer extends HTMLElement {
       return seg;
     };
 
-    // Helper function to create block elements (paragraphs, heads, etc.)
+    // Helper function to create block elements (lines, paragraphs, heads, etc.)
     const createBlockElement = (verseData) => {
-      const { id, text, color, n, isAligned } = verseData;
+      const { id, text, color, n, isAligned, tokens } = verseData;
       const div = document.createElement("div");
       div.className = isAligned ? CSS_CLASSES.VERSE_ALIGNED : CSS_CLASSES.VERSE_UNALIGNED;
       div.id = id;
       div.dataset.id = id;
 
-      if (color && isAligned) {
+      // Only colour the whole line when it has no inline words.
+      if (color && isAligned && !tokens) {
         div.style.backgroundColor = color;
       }
 
-      div.innerHTML = \`<span class="verse-number">\${n}</span>\${text}\`;
+      const num = document.createElement("span");
+      num.className = "verse-number";
+      num.textContent = n;
+      div.appendChild(num);
 
-      if (isAligned) {
-        addInteractionEvents(div, id);
+      if (tokens && tokens.length) {
+        // Inline word tokens: the line stays one row; each word is a span
+        // that can be aligned individually.
+        tokens.forEach((tok, i) => {
+          if (i > 0) div.appendChild(document.createTextNode(" "));
+          const w = document.createElement("span");
+          w.className = tok.isAligned ? "word aligned" : "word";
+          w.textContent = tok.text;
+          if (tok.isAligned) {
+            w.id = tok.id;
+            w.dataset.id = tok.id;
+            addInteractionEvents(w, tok.id);
+          }
+          div.appendChild(w);
+        });
+        // Line stays lockable on click (line-level alignment) but without hover,
+        // so it does not mask the word-level hover.
+        if (isAligned) addInteractionEvents(div, id, { hover: false });
+      } else {
+        div.appendChild(document.createTextNode(text));
+        if (isAligned) addInteractionEvents(div, id);
       }
 
       return div;
     };
 
-    const makeCard = (lang, verses, label) => {
+    const makeCard = (label, verses) => {
       const card = document.createElement("div");
       card.className = "card";
       const alignedCount = verses.filter(v => v.isAligned).length;
@@ -762,25 +830,120 @@ class TEIAlignmentViewer extends HTMLElement {
       return card;
     };
 
-    // Create cards for each language found
+    // Language idents (each nested TEI is one column)
     const langs = Object.keys(langData);
-    const langLabels = {
-      it: "Italian Text",
-      de: "German Translation",
-      en: "English Translation",
-      fr: "French Translation"
-    };
 
-    langs.forEach(lang => {
-      if (langData[lang] && langData[lang].length > 0) {
-        const label = langLabels[lang] || \`Text (\${lang})\`;
-        cards.appendChild(makeCard(lang, langData[lang], label));
+    // ---- discover cantica/canto sections for the filter ----
+    const refVerses = langs.length ? langData[langs[0]].verses : [];
+    const sections = [];
+    const seenSection = new Set();
+    refVerses.forEach(v => {
+      if (!v.cantica && !v.canto) return;
+      const key = (v.cantica || "") + "||" + (v.canto || "");
+      if (!seenSection.has(key)) {
+        seenSection.add(key);
+        sections.push({ cantica: v.cantica, canto: v.canto });
       }
     });
+    const hasSections = sections.length > 1;
+
+    // ---- (re)populate the sidebar with the visible section's aligned lines ----
+    const populateSidebar = (filterFn) => {
+      sidebarLinks.innerHTML = "";
+      const base = langs.length ? langData[langs[0]].verses : [];
+      base.filter(filterFn).filter(v => v.isAligned).slice(0, 500).forEach(v => {
+        const a = document.createElement("a");
+        a.href = "#" + v.id;
+        const preview = v.text.trim().substring(0, 28);
+        a.textContent = (v.canto ? "c." + v.canto + " · " : "") + (preview.length >= 28 ? preview + "…" : preview);
+        a.title = "Scroll to this line";
+        a.onclick = e => { e.preventDefault(); viewer.scrollToVerses(v.id); };
+        sidebarLinks.appendChild(a);
+      });
+    };
+
+    // ---- render the columns for a given section filter ----
+    const renderSection = (filterFn) => {
+      cards.innerHTML = "";
+      viewer.locked.clear();
+      langs.forEach(lang => {
+        const ld = langData[lang];
+        if (!ld || !ld.verses.length) return;
+        const verses = ld.verses.filter(filterFn).map((v, i) => Object.assign({}, v, { n: i + 1 }));
+        cards.appendChild(makeCard(ld.label, verses));
+      });
+      populateSidebar(filterFn);
+    };
+
+    // ---- controls bar (cantica / canto) ----
+    const main = document.createElement("div");
+    main.className = "main-col";
+    const controls = document.createElement("div");
+    controls.className = "controls";
+    main.appendChild(controls);
+    main.appendChild(cards);
+
+    let currentFilter = () => true;
+
+    if (hasSections) {
+      const canticas = [];
+      const seenC = new Set();
+      sections.forEach(s => { if (s.cantica && !seenC.has(s.cantica)) { seenC.add(s.cantica); canticas.push(s.cantica); } });
+
+      const cSel = document.createElement("select");
+      const ctSel = document.createElement("select");
+
+      const fillCanti = (cantica) => {
+        ctSel.innerHTML = "";
+        const all = document.createElement("option");
+        all.value = "*"; all.textContent = "All canti";
+        ctSel.appendChild(all);
+        sections.filter(s => s.cantica === cantica && s.canto).forEach(s => {
+          const o = document.createElement("option");
+          o.value = s.canto; o.textContent = "Canto " + s.canto;
+          ctSel.appendChild(o);
+        });
+      };
+
+      canticas.forEach(c => {
+        const o = document.createElement("option");
+        o.value = c; o.textContent = c;
+        cSel.appendChild(o);
+      });
+
+      const apply = () => {
+        const c = cSel.value, ct = ctSel.value;
+        currentFilter = v => v.cantica === c && (ct === "*" || v.canto === ct);
+        renderSection(currentFilter);
+      };
+      cSel.onchange = () => {
+        fillCanti(cSel.value);
+        if (ctSel.options[1]) ctSel.value = ctSel.options[1].value;
+        apply();
+      };
+      ctSel.onchange = apply;
+
+      const lbl = document.createElement("span");
+      lbl.className = "controls-label";
+      lbl.textContent = "View:";
+      controls.appendChild(lbl);
+      controls.appendChild(cSel);
+      controls.appendChild(ctSel);
+
+      // default: first cantica + its first canto (avoid mounting a whole cantica at once)
+      cSel.value = canticas[0];
+      fillCanti(canticas[0]);
+      if (ctSel.options[1]) ctSel.value = ctSel.options[1].value;
+      currentFilter = v => v.cantica === cSel.value && (ctSel.value === "*" || v.canto === ctSel.value);
+    } else {
+      controls.style.display = "none";
+    }
 
     layout.appendChild(sidebar);
-    layout.appendChild(cards);
+    layout.appendChild(main);
     contentWrapper.appendChild(layout);
+
+    renderSection(currentFilter);
 
     // Clear previous content before rendering new TEI
     this.shadowRoot.innerHTML = '';
@@ -791,36 +954,30 @@ class TEIAlignmentViewer extends HTMLElement {
 
   // Clear all highlighting from all elements
   clearAllHighlighting() {
-    const allElements = this.shadowRoot.querySelectorAll('[data-id]');
+    const allElements = this.shadowRoot.querySelectorAll('.locked, .hover-highlight');
     allElements.forEach(element => {
-      // Remove locked class from all elements (we'll re-add to current selection)
       element.classList.remove("locked");
+      element.classList.remove("hover-highlight");
+    });
+  }
+
+  // Toggle a class on an element and all its alignment partners, by id.
+  // O(partners) via getElementById instead of scanning every [data-id] node.
+  applyClassToGroup(id, cls, on) {
+    const partners = this.linkMap.get(id);
+    const ids = [id, ...(partners ? Array.from(partners) : [])];
+    ids.forEach(elId => {
+      const el = this.shadowRoot.getElementById(elId);
+      if (el) el.classList.toggle(cls, on);
     });
   }
 
   highlight(id, on) {
-    // Convert Set to Array for compatibility with existing code
-    const partners = this.linkMap.get(id);
-    const partnerIds = partners ? Array.from(partners) : [];
-    const verses = [];
+    this.applyClassToGroup(id, "locked", on);
+  }
 
-    // Find elements by data-id individually to avoid CSS selector issues
-    const allVerses = this.shadowRoot.querySelectorAll('[data-id]');
-    allVerses.forEach(verse => {
-      const dataId = verse.getAttribute('data-id');
-      // Check if this is the clicked element or any of its partners
-      // Using Set.has() would be O(1) but we already converted to array for other operations
-      if (dataId === id || partnerIds.includes(dataId)) {
-        verses.push(verse);
-      }
-    });
-
-    // Simply toggle locked state (no hover state needed)
-    if (on) {
-      verses.forEach(v => v.classList.add("locked"));
-    } else {
-      verses.forEach(v => v.classList.remove("locked"));
-    }
+  hoverHighlight(id, on) {
+    this.applyClassToGroup(id, "hover-highlight", on);
   }
 
   scrollToVerses(id) {
