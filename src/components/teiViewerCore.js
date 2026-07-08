@@ -15,7 +15,13 @@ export const TEI_VIEWER_CORE = {
       'fr': ['fr', 'fra', 'francais', 'french']
     };
 
-    for (const [key, variants] of Object.entries(languageMap)) {
+    // NOTE: avoid array destructuring here. These core methods are inlined
+    // into the standalone viewer via Function.prototype.toString(); Babel
+    // transpiles destructuring into a runtime helper (_slicedToArray) whose
+    // module-scoped reference is NOT carried into the standalone blob, causing
+    // a "ReferenceError: <helper> is not defined" at runtime.
+    for (const key of Object.keys(languageMap)) {
+      const variants = languageMap[key];
       if (variants.some(variant => lang.includes(variant))) {
         return key;
       }
@@ -187,7 +193,11 @@ export const TEI_VIEWER_CORE = {
       const targets = link.getAttribute("target");
       if (!targets) return;
 
-      const [id1, id2] = targets.split(" ").map(s => s.replace("#", ""));
+      // No array destructuring here: it transpiles to a _slicedToArray helper
+      // that is undefined in the inlined standalone viewer (see detectLanguage).
+      const targetIds2 = targets.split(" ").map(s => s.replace("#", ""));
+      const id1 = targetIds2[0];
+      const id2 = targetIds2[1];
       const color = palette[idx % palette.length];
 
       // Resolve join references to actual segment IDs
