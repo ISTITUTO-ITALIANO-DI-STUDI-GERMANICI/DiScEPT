@@ -69,6 +69,11 @@ const loadTransformers = async () => {
 // Session-level embedding cache: modelId -> Map<text, Float32Array>
 const embeddingCache = new Map();
 
+// Minimum cosine similarity for a word-level (Literal) link to be kept.
+// Word alignment is precision-oriented: below this, a word is left unaligned
+// rather than forced onto a weak match.
+const WORD_ALIGN_THRESHOLD = 0.4;
+
 /**
  * SmartAlignButton Component
  *
@@ -99,30 +104,23 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
   };
 
   /**
-   * Extract text elements from TEI document
+   * Extract text-bearing elements (p, l, ab, head, …) from an already-parsed
+   * TEI document. The returned `element` nodes are live references into
+   * `xmlDoc`, so mutating them (e.g. adding xml:id) and re-serialising the
+   * same document persists the change.
    */
-  const extractTextElements = (xmlString) => {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-
-    const parserError = xmlDoc.querySelector("parsererror");
-    if (parserError) {
-      throw new Error("Invalid XML");
-    }
-
-    // Extract text-bearing elements (p, l, ab, head, etc.)
+  const extractTextElements = (xmlDoc) => {
     const elements = [];
     const selectors = ["p", "l", "ab", "head", "quote", "note", "stage", "sp"];
 
     selectors.forEach(selector => {
       const nodes = xmlDoc.querySelectorAll(`text ${selector}`);
       nodes.forEach(node => {
-        const id = node.getAttribute("xml:id");
         const text = node.textContent.trim();
 
         if (text) {
           elements.push({
-            id: id || null,
+            id: node.getAttribute("xml:id") || null,
             text: text,
             element: node,
             tag: selector
@@ -133,6 +131,15 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
     return elements;
   };
+
+  /**
+   * Return the <w> token elements of a line, in document order, skipping empty
+   * ones. Empty array means the line is not tokenised at word level.
+   */
+  const getWordElements = (lineNode) =>
+    Array.from(lineNode.querySelectorAll("w"))
+      .map(node => ({ node, text: node.textContent.trim() }))
+      .filter(w => w.text);
 
   /**
    * Calculate cosine similarity between two vectors
@@ -148,7 +155,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       normB += vecB[i] * vecB[i];
     }
 
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    const denom = Math.sqrt(normA) * Math.sqrt(normB);
+    return denom === 0 ? 0 : dotProduct / denom;
   };
 
   /**
@@ -221,37 +229,64 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
   };
 
   /**
-   * Ensure elements have xml:id attributes
+   * Ensure an element has an xml:id, generating a stable one if missing.
+   * Mutates the node in place and returns the id. `changed` is a single-element
+   * boolean box so callers can track whether the owning document needs saving.
    */
-  const ensureIds = (xmlString, language, elements) => {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
-    let modified = false;
+  const ensureNodeId = (node, fallbackId, changed) => {
+    let id = node.getAttribute("xml:id");
+    if (!id) {
+      id = fallbackId;
+      node.setAttribute("xml:id", id);
+      changed.value = true;
+    }
+    return id;
+  };
 
-    elements.forEach((elem, idx) => {
-      if (!elem.id) {
-        // Find the element in the DOM and add ID
-        const selector = elem.tag;
-        const nodes = Array.from(xmlDoc.querySelectorAll(`text ${selector}`));
+  /**
+   * Align the words of two already-tokenised lines.
+   *
+   * Uses contextual token embeddings (mean-pooled per <w> over its sub-word
+   * pieces) and a bidirectional argmax: a pair (i, j) is kept only if j is the
+   * best match for i *and* i is the best match for j, and the cosine clears
+   * WORD_ALIGN_THRESHOLD.
+   *
+   * NOTE: with the current sentence-embedding models this is not reliable —
+   * a content word can be dragged onto a phrase-head that absorbed the same
+   * meaning in context (e.g. "cammin" → "MIDWAY upon the journey of our life",
+   * where "MIDWAY" outscores the correct "journey"). Fixing this needs a
+   * word-alignment-grade representation, not a matching tweak.
+   *
+   * Returns [{ i, j, score }] index pairs into wordsA / wordsB.
+   */
+  const alignWords = (vecsA, vecsB, threshold = WORD_ALIGN_THRESHOLD) => {
+    const n = vecsA.length;
+    const m = vecsB.length;
+    if (n === 0 || m === 0) return [];
 
-        // Match by text content
-        const node = nodes.find(n => n.textContent.trim() === elem.text);
-        if (node) {
-          const newId = `${language}-${selector}-${idx}-${Date.now()}`;
-          node.setAttribute("xml:id", newId);
-          elem.id = newId;
-          modified = true;
-        }
-      }
+    const sim = Array.from({ length: n }, (_, i) =>
+      Array.from({ length: m }, (_, j) => cosineSimilarity(vecsA[i], vecsB[j]))
+    );
+
+    const bestB = sim.map(row => {
+      let bj = 0, bv = -Infinity;
+      for (let j = 0; j < row.length; j++) if (row[j] > bv) { bv = row[j]; bj = j; }
+      return bj;
+    });
+    const bestA = Array.from({ length: m }, (_, j) => {
+      let bi = 0, bv = -Infinity;
+      for (let i = 0; i < n; i++) if (sim[i][j] > bv) { bv = sim[i][j]; bi = i; }
+      return bi;
     });
 
-    if (modified) {
-      const serializer = new XMLSerializer();
-      const updatedXml = serializer.serializeToString(xmlDoc);
-      data.updateDocumentPerLanguage(language, updatedXml);
+    const pairs = [];
+    for (let i = 0; i < n; i++) {
+      const j = bestB[i];
+      if (bestA[j] === i && sim[i][j] >= threshold) {
+        pairs.push({ i, j, score: sim[i][j] });
+      }
     }
-
-    return elements;
+    return pairs;
   };
 
   /**
@@ -266,7 +301,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
     setEmbedProgress({ done: 0, total: 0 });
 
     try {
-      const { pipeline, env } = await loadTransformers();
+      const { pipeline, env, Tensor } = await loadTransformers();
       const selectedModel = AI_MODELS.find(m => m.id === selectedModelId) ?? AI_MODELS[0];
 
       env.allowLocalModels = false;
@@ -279,19 +314,76 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         { progress_callback: () => {} }
       );
 
-      // Extract text elements from both documents
-      const xmlA = data.getDocumentPerLanguage(languageA);
-      const xmlB = data.getDocumentPerLanguage(languageB);
+      // Parse each document once. The extracted element nodes are live
+      // references into these docs, so any xml:id we add here is persisted by
+      // re-serialising the same document at the end.
+      const parser = new DOMParser();
+      const docA = parser.parseFromString(data.getDocumentPerLanguage(languageA), "application/xml");
+      const docB = parser.parseFromString(data.getDocumentPerLanguage(languageB), "application/xml");
+      if (docA.querySelector("parsererror") || docB.querySelector("parsererror")) {
+        throw new Error("Invalid XML");
+      }
+      const docAChanged = { value: false };
+      const docBChanged = { value: false };
 
-      let elementsA = extractTextElements(xmlA);
-      let elementsB = extractTextElements(xmlB);
+      const elementsA = extractTextElements(docA);
+      const elementsB = extractTextElements(docB);
 
       if (elementsA.length === 0 || elementsB.length === 0) {
         throw new Error("One or both documents have no text elements to align");
       }
 
-      elementsA = ensureIds(xmlA, languageA, elementsA);
-      elementsB = ensureIds(xmlB, languageB, elementsB);
+      // Contextual per-word embeddings for a single line: tokenise each <w>,
+      // run one forward pass over the whole line, then mean-pool the sub-word
+      // vectors belonging to each word (the SimAlign method). Words are thus
+      // embedded *in context*, not in isolation.
+      const probe = await extractor.tokenizer("a");
+      const probeIds = Array.from(probe.input_ids.data, Number);
+      const bosId = probeIds[0];
+      const eosId = probeIds[probeIds.length - 1];
+
+      const computeWordVectors = async (words) => {
+        const ids = [bosId];
+        const wordOfPos = [-1]; // -1 marks special tokens
+        for (let wi = 0; wi < words.length; wi++) {
+          const enc = await extractor.tokenizer(words[wi], { add_special_tokens: false });
+          for (const piece of enc.input_ids.data) {
+            ids.push(Number(piece));
+            wordOfPos.push(wi);
+          }
+        }
+        ids.push(eosId);
+        wordOfPos.push(-1);
+
+        const seq = ids.length;
+        const inputIds = new Tensor("int64", BigInt64Array.from(ids, v => BigInt(v)), [1, seq]);
+        const attention = new Tensor("int64", BigInt64Array.from(ids, () => 1n), [1, seq]);
+        const output = await extractor.model({ input_ids: inputIds, attention_mask: attention });
+        const hidden = output.last_hidden_state; // [1, seq, dim]
+        const dim = hidden.dims[2];
+        const hData = hidden.data;
+
+        const acc = words.map(() => ({ sum: new Float64Array(dim), n: 0 }));
+        for (let p = 0; p < wordOfPos.length; p++) {
+          const wi = wordOfPos[p];
+          if (wi < 0) continue;
+          const off = p * dim;
+          for (let d = 0; d < dim; d++) acc[wi].sum[d] += hData[off + d];
+          acc[wi].n++;
+        }
+        return acc.map(v => {
+          const out = new Float32Array(dim);
+          let norm = 0;
+          for (let d = 0; d < dim; d++) {
+            const x = v.n ? v.sum[d] / v.n : 0;
+            out[d] = x;
+            norm += x * x;
+          }
+          norm = Math.sqrt(norm) || 1;
+          for (let d = 0; d < dim; d++) out[d] /= norm;
+          return out;
+        });
+      };
 
       const total = elementsA.length + elementsB.length;
       setPhase("computing");
@@ -355,13 +447,50 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
       const alignments = alignSentences(embArrayA, embArrayB);
 
-      alignments.forEach(alignment => {
-        const sourceId = elementsA[alignment.sourceIdx].id;
-        const targetId = elementsB[alignment.targetIdx].id;
-        if (sourceId && targetId) {
-          data.addAlignment(languageA, languageB, [sourceId], [targetId], "Semantic");
+      let lineLinks = 0;
+      let wordLinks = 0;
+
+      for (const alignment of alignments) {
+        if (cancelledRef.current) throw new Error("cancelled");
+
+        const elemA = elementsA[alignment.sourceIdx];
+        const elemB = elementsB[alignment.targetIdx];
+
+        const lineIdA = ensureNodeId(elemA.element, `${languageA}-${elemA.tag}-${alignment.sourceIdx}-${Date.now()}`, docAChanged);
+        const lineIdB = ensureNodeId(elemB.element, `${languageB}-${elemB.tag}-${alignment.targetIdx}-${Date.now()}`, docBChanged);
+
+        // Always record the coarse line-level (Semantic) correspondence.
+        data.addAlignment(languageA, languageB, [lineIdA], [lineIdB], "Semantic");
+        lineLinks++;
+
+        // Descend to word level only when BOTH lines are tokenised into <w>.
+        // Mismatched levels fall back to the line link above.
+        const wordsA = getWordElements(elemA.element);
+        const wordsB = getWordElements(elemB.element);
+        if (wordsA.length === 0 || wordsB.length === 0) continue;
+
+        const vecsA = await computeWordVectors(wordsA.map(w => w.text));
+        const vecsB = await computeWordVectors(wordsB.map(w => w.text));
+        const wordPairs = alignWords(vecsA, vecsB);
+
+        for (const { i, j } of wordPairs) {
+          const wIdA = ensureNodeId(wordsA[i].node, `${lineIdA}-w${i + 1}`, docAChanged);
+          const wIdB = ensureNodeId(wordsB[j].node, `${lineIdB}-w${j + 1}`, docBChanged);
+          data.addAlignment(languageA, languageB, [wIdA], [wIdB], "Literal");
+          wordLinks++;
         }
-      });
+
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+
+      // Persist any xml:id attributes we added (line and word level).
+      const serializer = new XMLSerializer();
+      if (docAChanged.value) {
+        data.updateDocumentPerLanguage(languageA, serializer.serializeToString(docA));
+      }
+      if (docBChanged.value) {
+        data.updateDocumentPerLanguage(languageB, serializer.serializeToString(docB));
+      }
 
       setPhase("done");
 
@@ -370,7 +499,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       }
 
       showMessage(
-        `Smart alignment complete! Created ${alignments.length} alignment${alignments.length !== 1 ? "s" : ""}.`,
+        `Smart alignment complete! Created ${lineLinks} verse alignment${lineLinks !== 1 ? "s" : ""}` +
+          (wordLinks > 0 ? ` and ${wordLinks} word alignment${wordLinks !== 1 ? "s" : ""}.` : "."),
         "success"
       );
 

@@ -715,6 +715,8 @@ class TEIAlignmentViewer extends HTMLElement {
           viewer.locked.clear();
           viewer.locked.add(id);
           viewer.highlight(id, true);
+          // Scroll the other translations to the aligned verse.
+          viewer.scrollToPartners(id);
         }
       });
     };
@@ -978,6 +980,18 @@ class TEIAlignmentViewer extends HTMLElement {
 
   hoverHighlight(id, on) {
     this.applyClassToGroup(id, "hover-highlight", on);
+  }
+
+  // Scroll every alignment partner of \`id\` into view within its own column,
+  // without touching highlighting. The clicked column is left untouched, so
+  // only the translations move to the aligned verse.
+  scrollToPartners(id) {
+    const partners = this.linkMap.get(id);
+    if (!partners) return;
+    partners.forEach(partnerId => {
+      const el = this.shadowRoot.getElementById(partnerId);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   scrollToVerses(id) {
