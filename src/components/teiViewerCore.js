@@ -58,8 +58,11 @@ export const TEI_VIEWER_CORE = {
     // Supports: Poetry (<l>), Prose (<p>, <ab>), Drama (<sp>, <stage>),
     // and Structural elements (<head>, <date>, <trailer>, <quote>, <note>),
     // words (<w>) and segments (<seg>)
+    // NOTE: <w> is intentionally NOT in this flat selector. Word tokens are
+    // attached to their parent line/paragraph as `tokens` (see below) so the
+    // line stays a single structural unit instead of one box per word.
     const allElements = Array.from(
-      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note, text w, text seg")
+      tei.querySelectorAll("text l, text p, text ab, text sp, text stage, text head, text date, text trailer, text quote, text note, text seg")
     );
 
     // Helper function to process any text-bearing element
@@ -77,7 +80,25 @@ export const TEI_VIEWER_CORE = {
             });
           }
         });
-      } else if (element.getAttribute("xml:id")) {
+        return;
+      }
+
+      // Element wrapping word tokens (<w xml:id>...): keep the element as the
+      // structural unit and attach its words as `tokens`. The words render
+      // inline within the line and can be aligned individually.
+      const words = Array.from(element.querySelectorAll("w"))
+        .filter(w => w.getAttribute("xml:id") && w.textContent.trim());
+      if (words.length > 0) {
+        validElements.push({
+          element: element,
+          type: element.tagName.toLowerCase(),
+          parent: null,
+          tokens: words.map(w => ({ id: w.getAttribute("xml:id"), text: w.textContent.trim() }))
+        });
+        return;
+      }
+
+      if (element.getAttribute("xml:id")) {
         // Element itself has an ID and should be aligned as a whole
         if (element.textContent.trim()) {
           validElements.push({
@@ -231,10 +252,14 @@ export const TEI_VIEWER_CORE = {
     const teis = xml.querySelectorAll("TEI > TEI");
     const langData = {};
 
-    teis.forEach(tei => {
+    teis.forEach((tei, teiIndex) => {
       const langElement = tei.querySelector("language");
-      const langKey = this.detectLanguage(langElement);
-      if (!langKey) return;
+      // Key by the (unique) language ident so multiple texts in the same
+      // language (e.g. two English translations) do not collide.
+      const ident = (langElement && langElement.getAttribute("ident"))
+        || this.detectLanguage(langElement)
+        || `text-${teiIndex + 1}`;
+      const label = (langElement && langElement.textContent.trim()) || ident;
 
       const textElements = this.extractTextElements(tei);
       const verses = [];
@@ -246,18 +271,33 @@ export const TEI_VIEWER_CORE = {
         const color = id ? (colorMap.get(id) || "") : "";
         const isAligned = id ? colorMap.has(id) : false;
 
+        // Word-level tokens (if the element wraps <w> children)
+        const tokens = item.tokens ? item.tokens.map(t => ({
+          id: t.id,
+          text: t.text,
+          isAligned: colorMap.has(t.id),
+          color: colorMap.get(t.id) || ""
+        })) : null;
+
+        // Structural position, used by the cantica/canto section filter
+        const cantoDiv = element.closest ? element.closest('div[type="canto"]') : null;
+        const canticaDiv = element.closest ? element.closest('div[type="cantica"]') : null;
+
         verses.push({
           id: id || `element-${index + 1}`,
           text,
+          tokens,
           color,
           n: index + 1,
           isAligned,
           elementType: item.type,
-          parent: item.parent
+          parent: item.parent,
+          cantica: canticaDiv ? canticaDiv.getAttribute("n") : null,
+          canto: cantoDiv ? cantoDiv.getAttribute("n") : null
         });
       });
 
-      langData[langKey] = verses;
+      langData[ident] = { label, verses };
     });
 
     return langData;
