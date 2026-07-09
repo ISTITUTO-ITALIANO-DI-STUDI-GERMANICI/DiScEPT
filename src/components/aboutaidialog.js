@@ -56,8 +56,9 @@ export default function AboutAIDialog({ open, onClose }) {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>About Smart Alignment</DialogTitle>
       <DialogContent dividers>
-
-        <Typography variant="h6" gutterBottom>How it works</Typography>
+        <Typography variant="h6" gutterBottom>
+          How it works
+        </Typography>
         <Typography variant="body2" paragraph>
           Smart Align computes dense sentence embeddings for every text element
           in both documents, then finds the best order-preserving (monotone)
@@ -70,24 +71,42 @@ export default function AboutAIDialog({ open, onClose }) {
           and then cached locally.
         </Typography>
 
-        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Available models</Typography>
+        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+          Available models
+        </Typography>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell><strong>Model</strong></TableCell>
-              <TableCell><strong>Size</strong></TableCell>
-              <TableCell><strong>Languages</strong></TableCell>
-              <TableCell><strong>Quality</strong></TableCell>
-              <TableCell><strong>Speed</strong></TableCell>
-              <TableCell><strong>Best for</strong></TableCell>
+              <TableCell>
+                <strong>Model</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Size</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Languages</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Quality</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Speed</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Best for</strong>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {MODELS_INFO.map((m) => (
               <TableRow key={m.id}>
                 <TableCell>
-                  <Typography variant="body2" fontWeight={600}>{m.short}</Typography>
-                  <Typography variant="caption" color="text.secondary">{m.id}</Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {m.short}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {m.id}
+                  </Typography>
                 </TableCell>
                 <TableCell>{m.size}</TableCell>
                 <TableCell>{m.languages}</TableCell>
@@ -104,20 +123,53 @@ export default function AboutAIDialog({ open, onClose }) {
         <Box sx={{ mt: 2, p: 1.5, bgcolor: "action.hover", borderRadius: 1 }}>
           <Typography variant="body2">
             <strong>Tip:</strong> If your language pair is not among the most
-            common European languages, choose <em>E5 small</em> or <em>E5 base</em>
-            — they cover 100 languages including Nordic, Slavic, Asian, and
-            classical languages. MiniLM only covers 50 languages and may produce
-            poor results outside that set.
+            common European languages, choose <em>E5 small</em> or{" "}
+            <em>E5 base</em>— they cover 100 languages including Nordic, Slavic,
+            Asian, and classical languages. MiniLM only covers 50 languages and
+            may produce poor results outside that set.
           </Typography>
         </Box>
 
-        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Alignment algorithm</Typography>
+        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+          Word-level alignment
+        </Typography>
+        <Typography variant="body2" paragraph>
+          When two aligned verses are both tokenised into <code>{"<w>"}</code>
+          words, Smart Align also links individual words — but with a{" "}
+          <strong>different model</strong> from the line step. The sentence
+          models above compress a whole line into a single vector and are
+          unreliable at the word level (a content word gets pulled onto whatever
+          phrase absorbed its meaning — e.g. <em>cammin → MIDWAY</em> instead of{" "}
+          <em>journey</em>).
+        </Typography>
+        <Typography variant="body2" paragraph>
+          The <strong>Word model</strong> is instead a masked language model
+          (multilingual BERT) read at an{" "}
+          <strong>intermediate layer (layer 8)</strong>. As shown by SimAlign
+          and awesome-align, that layer gives the best word-to-word
+          correspondence and is independent of word order — so it handles cases
+          the sentence models miss, like <em>cammin → journey</em>
+          and <em>nostra → our</em>. The default, <em>awesome-align</em>, is
+          mBERT fine-tuned for alignment and exported truncated to its first 8
+          layers.
+        </Typography>
+        <Typography variant="body2" paragraph>
+          It is downloaded on demand (~143 MB) <strong>only</strong> when a
+          verse pair actually has words, runs entirely in your browser, and
+          links two words when they are each other's best match (mutual argmax)
+          above a similarity threshold — precision over coverage, so a word with
+          no good match is left unlinked.
+        </Typography>
+
+        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+          Alignment algorithm
+        </Typography>
         <Typography variant="body2" paragraph>
           After computing embeddings, the tool builds a full similarity matrix
           (cosine similarity between every pair of paragraphs) and runs a
           DP-based alignment that maximises the total similarity while
-          guaranteeing monotonicity — i.e. if paragraph <em>i</em> is aligned
-          to paragraph <em>j</em>, then the next alignment will always pick a
+          guaranteeing monotonicity — i.e. if paragraph <em>i</em> is aligned to
+          paragraph <em>j</em>, then the next alignment will always pick a
           paragraph after <em>j</em>. Pairs whose similarity falls below a
           minimum threshold are skipped.
         </Typography>
@@ -125,7 +177,6 @@ export default function AboutAIDialog({ open, onClose }) {
           Complexity is O(n × m) where n and m are the number of text elements
           in each document — fast enough for hundreds of paragraphs.
         </Typography>
-
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

@@ -57,6 +57,20 @@ const AI_MODELS = [
   },
 ];
 
+// Word-level alignment models. Unlike the sentence models above, these are MLMs
+// read at an intermediate layer (awesome-align = mBERT truncated to layer 8),
+// which give reliable word-to-word correspondence. Loaded lazily, only when a
+// verse pair actually has <w> tokens.
+const WORD_MODELS = [
+  {
+    id: "bakulf/awesome-align-tjs",
+    short: "awesome-align",
+    label: "awesome-align (mBERT L8)",
+    size: "~143 MB",
+    languages: "104 languages",
+  },
+];
+
 // Lazy load transformers to avoid bundling it by default
 let transformersModule = null;
 const loadTransformers = async () => {
@@ -80,12 +94,24 @@ const WORD_ALIGN_THRESHOLD = 0.4;
  * Performs client-side alignment using a multilingual sentence embedding model.
  * Downloads model on-demand and caches it in the browser.
  */
-export default function SmartAlignButton({ languageA, languageB, onAlignmentUpdated, disabled, ...props }) {
+export default function SmartAlignButton({
+  languageA,
+  languageB,
+  onAlignmentUpdated,
+  disabled,
+  ...props
+}) {
   const [loading, setLoading] = React.useState(false);
   const [downloadDialog, setDownloadDialog] = React.useState(false);
   const [phase, setPhase] = React.useState("idle"); // idle | loading | computing | aligning | done
-  const [embedProgress, setEmbedProgress] = React.useState({ done: 0, total: 0 });
+  const [embedProgress, setEmbedProgress] = React.useState({
+    done: 0,
+    total: 0,
+  });
   const [selectedModelId, setSelectedModelId] = React.useState(AI_MODELS[0].id);
+  const [selectedWordModelId, setSelectedWordModelId] = React.useState(
+    WORD_MODELS[0].id,
+  );
   const cancelledRef = React.useRef(false);
   const [cancelling, setCancelling] = React.useState(false);
   const [aboutOpen, setAboutOpen] = React.useState(false);
@@ -113,9 +139,9 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
     const elements = [];
     const selectors = ["p", "l", "ab", "head", "quote", "note", "stage", "sp"];
 
-    selectors.forEach(selector => {
+    selectors.forEach((selector) => {
       const nodes = xmlDoc.querySelectorAll(`text ${selector}`);
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         const text = node.textContent.trim();
 
         if (text) {
@@ -123,7 +149,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
             id: node.getAttribute("xml:id") || null,
             text: text,
             element: node,
-            tag: selector
+            tag: selector,
           });
         }
       });
@@ -138,8 +164,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
    */
   const getWordElements = (lineNode) =>
     Array.from(lineNode.querySelectorAll("w"))
-      .map(node => ({ node, text: node.textContent.trim() }))
-      .filter(w => w.text);
+      .map((node) => ({ node, text: node.textContent.trim() }))
+      .filter((w) => w.text);
 
   /**
    * Calculate cosine similarity between two vectors
@@ -176,8 +202,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
     // Precompute full similarity matrix
     const sim = Array.from({ length: n }, (_, i) =>
       Array.from({ length: m }, (_, j) =>
-        cosineSimilarity(embeddingsA[i].data, embeddingsB[j].data)
-      )
+        cosineSimilarity(embeddingsA[i].data, embeddingsB[j].data),
+      ),
     );
 
     // dp[i][j] = best cumulative score aligning A[0..i-1] with B[0..j-1]
@@ -190,8 +216,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
     for (let i = 1; i <= n; i++) {
       for (let j = 1; j <= m; j++) {
         const matchScore = dp[i - 1][j - 1] + sim[i - 1][j - 1];
-        const skipA     = dp[i - 1][j];
-        const skipB     = dp[i][j - 1];
+        const skipA = dp[i - 1][j];
+        const skipB = dp[i][j - 1];
 
         if (matchScore >= skipA && matchScore >= skipB) {
           dp[i][j] = matchScore;
@@ -208,14 +234,20 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
     // Traceback
     const alignments = [];
-    let i = n, j = m;
+    let i = n,
+      j = m;
     while (i > 0 && j > 0) {
       switch (parent[i][j]) {
         case 0: // match
           if (sim[i - 1][j - 1] >= threshold) {
-            alignments.unshift({ sourceIdx: i - 1, targetIdx: j - 1, score: sim[i - 1][j - 1] });
+            alignments.unshift({
+              sourceIdx: i - 1,
+              targetIdx: j - 1,
+              score: sim[i - 1][j - 1],
+            });
           }
-          i--; j--;
+          i--;
+          j--;
           break;
         case 1: // skipA
           i--;
@@ -265,17 +297,27 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
     if (n === 0 || m === 0) return [];
 
     const sim = Array.from({ length: n }, (_, i) =>
-      Array.from({ length: m }, (_, j) => cosineSimilarity(vecsA[i], vecsB[j]))
+      Array.from({ length: m }, (_, j) => cosineSimilarity(vecsA[i], vecsB[j])),
     );
 
-    const bestB = sim.map(row => {
-      let bj = 0, bv = -Infinity;
-      for (let j = 0; j < row.length; j++) if (row[j] > bv) { bv = row[j]; bj = j; }
+    const bestB = sim.map((row) => {
+      let bj = 0,
+        bv = -Infinity;
+      for (let j = 0; j < row.length; j++)
+        if (row[j] > bv) {
+          bv = row[j];
+          bj = j;
+        }
       return bj;
     });
     const bestA = Array.from({ length: m }, (_, j) => {
-      let bi = 0, bv = -Infinity;
-      for (let i = 0; i < n; i++) if (sim[i][j] > bv) { bv = sim[i][j]; bi = i; }
+      let bi = 0,
+        bv = -Infinity;
+      for (let i = 0; i < n; i++)
+        if (sim[i][j] > bv) {
+          bv = sim[i][j];
+          bi = i;
+        }
       return bi;
     });
 
@@ -302,25 +344,35 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
     try {
       const { pipeline, env, Tensor } = await loadTransformers();
-      const selectedModel = AI_MODELS.find(m => m.id === selectedModelId) ?? AI_MODELS[0];
+      const selectedModel =
+        AI_MODELS.find((m) => m.id === selectedModelId) ?? AI_MODELS[0];
+      const selectedWordModel =
+        WORD_MODELS.find((m) => m.id === selectedWordModelId) ?? WORD_MODELS[0];
 
       env.allowLocalModels = false;
       env.allowRemoteModels = true;
       env.backends.onnx.wasm.proxy = true;
 
-      const extractor = await pipeline(
-        "feature-extraction",
-        selectedModel.id,
-        { progress_callback: () => {} }
-      );
+      const extractor = await pipeline("feature-extraction", selectedModel.id, {
+        progress_callback: () => {},
+      });
 
       // Parse each document once. The extracted element nodes are live
       // references into these docs, so any xml:id we add here is persisted by
       // re-serialising the same document at the end.
       const parser = new DOMParser();
-      const docA = parser.parseFromString(data.getDocumentPerLanguage(languageA), "application/xml");
-      const docB = parser.parseFromString(data.getDocumentPerLanguage(languageB), "application/xml");
-      if (docA.querySelector("parsererror") || docB.querySelector("parsererror")) {
+      const docA = parser.parseFromString(
+        data.getDocumentPerLanguage(languageA),
+        "application/xml",
+      );
+      const docB = parser.parseFromString(
+        data.getDocumentPerLanguage(languageB),
+        "application/xml",
+      );
+      if (
+        docA.querySelector("parsererror") ||
+        docB.querySelector("parsererror")
+      ) {
         throw new Error("Invalid XML");
       }
       const docAChanged = { value: false };
@@ -333,33 +385,67 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         throw new Error("One or both documents have no text elements to align");
       }
 
-      // Contextual per-word embeddings for a single line: tokenise each <w>,
-      // run one forward pass over the whole line, then mean-pool the sub-word
-      // vectors belonging to each word (the SimAlign method). Words are thus
-      // embedded *in context*, not in isolation.
-      const probe = await extractor.tokenizer("a");
-      const probeIds = Array.from(probe.input_ids.data, Number);
-      const bosId = probeIds[0];
-      const eosId = probeIds[probeIds.length - 1];
+      // Word-level embeddings come from a SEPARATE model: an MLM read at an
+      // intermediate layer (awesome-align = mBERT truncated to layer 8), which —
+      // unlike the sentence model above — gives reliable word-to-word matches.
+      // It is loaded lazily (on-demand from HF, ~143 MB) the first time a verse
+      // pair actually needs word alignment, so documents without <w> tokens
+      // never download it. Per line we run one forward pass and mean-pool the
+      // sub-word vectors of each <w> (the SimAlign method).
+      let wordExtractor = null;
+      let wordSpecials = null;
+      const getWordExtractor = async () => {
+        if (!wordExtractor) {
+          wordExtractor = await pipeline(
+            "feature-extraction",
+            selectedWordModel.id,
+            { progress_callback: () => {} },
+          );
+          const probe = await wordExtractor.tokenizer("a");
+          const ids = Array.from(probe.input_ids.data, Number);
+          wordSpecials = { cls: ids[0], sep: ids[ids.length - 1] };
+        }
+        return wordExtractor;
+      };
 
       const computeWordVectors = async (words) => {
-        const ids = [bosId];
+        const we = await getWordExtractor();
+        const ids = [wordSpecials.cls];
         const wordOfPos = [-1]; // -1 marks special tokens
         for (let wi = 0; wi < words.length; wi++) {
-          const enc = await extractor.tokenizer(words[wi], { add_special_tokens: false });
+          const enc = await we.tokenizer(words[wi], {
+            add_special_tokens: false,
+          });
           for (const piece of enc.input_ids.data) {
             ids.push(Number(piece));
             wordOfPos.push(wi);
           }
         }
-        ids.push(eosId);
+        ids.push(wordSpecials.sep);
         wordOfPos.push(-1);
 
         const seq = ids.length;
-        const inputIds = new Tensor("int64", BigInt64Array.from(ids, v => BigInt(v)), [1, seq]);
-        const attention = new Tensor("int64", BigInt64Array.from(ids, () => 1n), [1, seq]);
-        const output = await extractor.model({ input_ids: inputIds, attention_mask: attention });
-        const hidden = output.last_hidden_state; // [1, seq, dim]
+        const inputIds = new Tensor(
+          "int64",
+          BigInt64Array.from(ids, (v) => BigInt(v)),
+          [1, seq],
+        );
+        const attention = new Tensor(
+          "int64",
+          BigInt64Array.from(ids, () => 1n),
+          [1, seq],
+        );
+        const tokenTypes = new Tensor(
+          "int64",
+          BigInt64Array.from(ids, () => 0n),
+          [1, seq],
+        );
+        const output = await we.model({
+          input_ids: inputIds,
+          attention_mask: attention,
+          token_type_ids: tokenTypes,
+        });
+        const hidden = output.last_hidden_state; // layer 8 (model truncated to 8 layers)
         const dim = hidden.dims[2];
         const hData = hidden.data;
 
@@ -371,7 +457,7 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
           for (let d = 0; d < dim; d++) acc[wi].sum[d] += hData[off + d];
           acc[wi].n++;
         }
-        return acc.map(v => {
+        return acc.map((v) => {
           const out = new Float32Array(dim);
           let norm = 0;
           for (let d = 0; d < dim; d++) {
@@ -392,7 +478,8 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       // 512 tokens ≈ 1500 characters — pre-truncate so the tokenizer doesn't
       // waste time on text the model would discard anyway.
       const MAX_CHARS = 1500;
-      const truncate = (t) => t.length > MAX_CHARS ? t.slice(0, MAX_CHARS) : t;
+      const truncate = (t) =>
+        t.length > MAX_CHARS ? t.slice(0, MAX_CHARS) : t;
 
       // Per-model cache for this session.
       if (!embeddingCache.has(selectedModel.id)) {
@@ -418,16 +505,29 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         for (let b = 0; b < uncachedIndices.length; b += BATCH_SIZE) {
           if (cancelledRef.current) throw new Error("cancelled");
           const batchIndices = uncachedIndices.slice(b, b + BATCH_SIZE);
-          const batch = batchIndices.map(i => truncate(texts[i]));
-          const output = await extractor(batch, { pooling: "mean", normalize: true });
+          const batch = batchIndices.map((i) => truncate(texts[i]));
+          const output = await extractor(batch, {
+            pooling: "mean",
+            normalize: true,
+          });
           const dim = output.dims[1];
           for (let j = 0; j < batchIndices.length; j++) {
-            const embedding = Array.from(output.data.slice(j * dim, (j + 1) * dim));
+            const embedding = Array.from(
+              output.data.slice(j * dim, (j + 1) * dim),
+            );
             modelCache.set(texts[batchIndices[j]], embedding);
             results[batchIndices[j]] = { data: embedding };
           }
-          setEmbedProgress({ done: offset + uncachedIndices[Math.min(b + BATCH_SIZE, uncachedIndices.length) - 1] + 1, total });
-          await new Promise(resolve => setTimeout(resolve, 0));
+          setEmbedProgress({
+            done:
+              offset +
+              uncachedIndices[
+                Math.min(b + BATCH_SIZE, uncachedIndices.length) - 1
+              ] +
+              1,
+            total,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 0));
         }
 
         // Ensure final count is accurate (all cached = instant)
@@ -436,60 +536,109 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
       };
 
       const prefix = selectedModel.prefix ?? "";
-      const textsA = elementsA.map(e => prefix + e.text);
-      const textsB = elementsB.map(e => prefix + e.text);
+      const textsA = elementsA.map((e) => prefix + e.text);
+      const textsB = elementsB.map((e) => prefix + e.text);
 
       const embArrayA = await computeEmbeddings(textsA, 0);
       const embArrayB = await computeEmbeddings(textsB, textsA.length);
 
       setPhase("aligning");
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       const alignments = alignSentences(embArrayA, embArrayB);
 
       let lineLinks = 0;
       let wordLinks = 0;
 
+      // First pass: create the coarse line-level (Semantic) links and collect
+      // the verse pairs that are tokenised at word level on BOTH sides.
+      const wordJobs = [];
       for (const alignment of alignments) {
         if (cancelledRef.current) throw new Error("cancelled");
 
         const elemA = elementsA[alignment.sourceIdx];
         const elemB = elementsB[alignment.targetIdx];
 
-        const lineIdA = ensureNodeId(elemA.element, `${languageA}-${elemA.tag}-${alignment.sourceIdx}-${Date.now()}`, docAChanged);
-        const lineIdB = ensureNodeId(elemB.element, `${languageB}-${elemB.tag}-${alignment.targetIdx}-${Date.now()}`, docBChanged);
+        const lineIdA = ensureNodeId(
+          elemA.element,
+          `${languageA}-${elemA.tag}-${alignment.sourceIdx}-${Date.now()}`,
+          docAChanged,
+        );
+        const lineIdB = ensureNodeId(
+          elemB.element,
+          `${languageB}-${elemB.tag}-${alignment.targetIdx}-${Date.now()}`,
+          docBChanged,
+        );
 
         // Always record the coarse line-level (Semantic) correspondence.
-        data.addAlignment(languageA, languageB, [lineIdA], [lineIdB], "Semantic");
+        data.addAlignment(
+          languageA,
+          languageB,
+          [lineIdA],
+          [lineIdB],
+          "Semantic",
+        );
         lineLinks++;
 
         // Descend to word level only when BOTH lines are tokenised into <w>.
         // Mismatched levels fall back to the line link above.
         const wordsA = getWordElements(elemA.element);
         const wordsB = getWordElements(elemB.element);
-        if (wordsA.length === 0 || wordsB.length === 0) continue;
-
-        const vecsA = await computeWordVectors(wordsA.map(w => w.text));
-        const vecsB = await computeWordVectors(wordsB.map(w => w.text));
-        const wordPairs = alignWords(vecsA, vecsB);
-
-        for (const { i, j } of wordPairs) {
-          const wIdA = ensureNodeId(wordsA[i].node, `${lineIdA}-w${i + 1}`, docAChanged);
-          const wIdB = ensureNodeId(wordsB[j].node, `${lineIdB}-w${j + 1}`, docBChanged);
-          data.addAlignment(languageA, languageB, [wIdA], [wIdB], "Literal");
-          wordLinks++;
+        if (wordsA.length > 0 && wordsB.length > 0) {
+          wordJobs.push({ wordsA, wordsB, lineIdA, lineIdB });
         }
+      }
 
-        await new Promise(resolve => setTimeout(resolve, 0));
+      // Second pass: word-level (Literal) links. Only now — if some verse pair
+      // has words — do we load the large word model, so documents without <w>
+      // tokens never pay for the download.
+      if (wordJobs.length > 0) {
+        setPhase("loadingWord");
+        await getWordExtractor();
+        setPhase("aligningWords");
+        setEmbedProgress({ done: 0, total: wordJobs.length });
+
+        for (let k = 0; k < wordJobs.length; k++) {
+          if (cancelledRef.current) throw new Error("cancelled");
+          const { wordsA, wordsB, lineIdA, lineIdB } = wordJobs[k];
+
+          const vecsA = await computeWordVectors(wordsA.map((w) => w.text));
+          const vecsB = await computeWordVectors(wordsB.map((w) => w.text));
+          const wordPairs = alignWords(vecsA, vecsB);
+
+          for (const { i, j } of wordPairs) {
+            const wIdA = ensureNodeId(
+              wordsA[i].node,
+              `${lineIdA}-w${i + 1}`,
+              docAChanged,
+            );
+            const wIdB = ensureNodeId(
+              wordsB[j].node,
+              `${lineIdB}-w${j + 1}`,
+              docBChanged,
+            );
+            data.addAlignment(languageA, languageB, [wIdA], [wIdB], "Literal");
+            wordLinks++;
+          }
+
+          setEmbedProgress({ done: k + 1, total: wordJobs.length });
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
       }
 
       // Persist any xml:id attributes we added (line and word level).
       const serializer = new XMLSerializer();
       if (docAChanged.value) {
-        data.updateDocumentPerLanguage(languageA, serializer.serializeToString(docA));
+        data.updateDocumentPerLanguage(
+          languageA,
+          serializer.serializeToString(docA),
+        );
       }
       if (docBChanged.value) {
-        data.updateDocumentPerLanguage(languageB, serializer.serializeToString(docB));
+        data.updateDocumentPerLanguage(
+          languageB,
+          serializer.serializeToString(docB),
+        );
       }
 
       setPhase("done");
@@ -500,10 +649,11 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
 
       showMessage(
         `Smart alignment complete! Created ${lineLinks} verse alignment${lineLinks !== 1 ? "s" : ""}` +
-          (wordLinks > 0 ? ` and ${wordLinks} word alignment${wordLinks !== 1 ? "s" : ""}.` : "."),
-        "success"
+          (wordLinks > 0
+            ? ` and ${wordLinks} word alignment${wordLinks !== 1 ? "s" : ""}.`
+            : "."),
+        "success",
       );
-
     } catch (error) {
       if (error.message !== "cancelled") {
         console.error("Smart alignment error:", error);
@@ -518,36 +668,72 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
     }
   };
 
-  const selectedModel = AI_MODELS.find(m => m.id === selectedModelId) ?? AI_MODELS[0];
+  const selectedModel =
+    AI_MODELS.find((m) => m.id === selectedModelId) ?? AI_MODELS[0];
+  const selectedWordModel =
+    WORD_MODELS.find((m) => m.id === selectedWordModelId) ?? WORD_MODELS[0];
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-        <FormControl fullWidth size="small" disabled={disabled || loading}>
-        <InputLabel id="ai-model-label">AI Model</InputLabel>
-        <Select
-          labelId="ai-model-label"
-          value={selectedModelId}
-          label="Modello AI"
-          onChange={(e) => setSelectedModelId(e.target.value)}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
-          {AI_MODELS.map(m => (
-            <MenuItem key={m.id} value={m.id}>
-              <Box>
-                <Typography variant="body2">{m.label}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {m.size} · {m.languages}
-                </Typography>
-              </Box>
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-        <Tooltip title="About AI models">
-          <IconButton size="small" onClick={() => setAboutOpen(true)}>
-            <InfoOutlinedIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+          <Typography variant="subtitle2" color="text.secondary">
+            Alignment models
+          </Typography>
+          <Tooltip title="About Smart Alignment & models">
+            <IconButton size="small" onClick={() => setAboutOpen(true)}>
+              <InfoOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <FormControl fullWidth size="small" disabled={disabled || loading}>
+          <InputLabel id="ai-model-label">Line model (sentences)</InputLabel>
+          <Select
+            labelId="ai-model-label"
+            value={selectedModelId}
+            label="Line model (sentences)"
+            onChange={(e) => setSelectedModelId(e.target.value)}
+          >
+            {AI_MODELS.map((m) => (
+              <MenuItem key={m.id} value={m.id}>
+                <Box>
+                  <Typography variant="body2">{m.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {m.size} · {m.languages}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth size="small" disabled={disabled || loading}>
+          <InputLabel id="word-model-label">Word model</InputLabel>
+          <Select
+            labelId="word-model-label"
+            value={selectedWordModelId}
+            label="Word model"
+            onChange={(e) => setSelectedWordModelId(e.target.value)}
+          >
+            {WORD_MODELS.map((m) => (
+              <MenuItem key={m.id} value={m.id}>
+                <Box>
+                  <Typography variant="body2">{m.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {m.size} · {m.languages}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Box>
 
       <Button
@@ -556,7 +742,11 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
         onClick={performAlignment}
         {...props}
       >
-        {loading ? <CircularProgress size="24px" /> : `Smart Align (AI, ${selectedModel.size})`}
+        {loading ? (
+          <CircularProgress size="24px" />
+        ) : (
+          `Smart Align (AI, ${selectedModel.size})`
+        )}
       </Button>
 
       <Dialog open={downloadDialog} disableEscapeKeyDown>
@@ -565,26 +755,51 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
           <DialogContentText sx={{ mb: 2 }}>
             {cancelling
               ? "Cancelling… waiting for current batch to finish."
-              : phase === "loading"   ? `Loading model ${selectedModel.short} (${selectedModel.size})…`
-              : phase === "computing" ? `Computing embeddings: ${embedProgress.done} / ${embedProgress.total} texts`
-              : phase === "aligning"  ? "Finding best alignments…"
-              : "Complete!"}
+              : phase === "loading"
+                ? `Loading line model ${selectedModel.short} (${selectedModel.size})…`
+                : phase === "computing"
+                  ? `Computing embeddings: ${embedProgress.done} / ${embedProgress.total} texts`
+                  : phase === "aligning"
+                    ? "Finding best line alignments…"
+                    : phase === "loadingWord"
+                      ? `Loading word model ${selectedWordModel.short} (${selectedWordModel.size})…`
+                      : phase === "aligningWords"
+                        ? `Aligning words: ${embedProgress.done} / ${embedProgress.total} verses`
+                        : "Complete!"}
           </DialogContentText>
           <Box sx={{ width: "100%" }}>
-            {phase === "loading" && <LinearProgress variant="indeterminate" />}
-            {phase === "computing" && (
+            {(phase === "loading" || phase === "loadingWord") && (
+              <LinearProgress variant="indeterminate" />
+            )}
+            {(phase === "computing" || phase === "aligningWords") && (
               <>
                 <LinearProgress
                   variant="determinate"
-                  value={embedProgress.total > 0 ? (embedProgress.done / embedProgress.total) * 100 : 0}
+                  value={
+                    embedProgress.total > 0
+                      ? (embedProgress.done / embedProgress.total) * 100
+                      : 0
+                  }
                 />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
-                  {embedProgress.total > 0 ? Math.round((embedProgress.done / embedProgress.total) * 100) : 0}%
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, display: "block" }}
+                >
+                  {embedProgress.total > 0
+                    ? Math.round(
+                        (embedProgress.done / embedProgress.total) * 100,
+                      )
+                    : 0}
+                  %
                 </Typography>
               </>
             )}
             {(phase === "aligning" || phase === "done") && (
-              <LinearProgress variant={phase === "aligning" ? "indeterminate" : "determinate"} value={100} />
+              <LinearProgress
+                variant={phase === "aligning" ? "indeterminate" : "determinate"}
+                value={100}
+              />
             )}
           </Box>
         </DialogContent>
@@ -593,7 +808,10 @@ export default function SmartAlignButton({ languageA, languageB, onAlignmentUpda
             <Button
               color="error"
               disabled={cancelling}
-              onClick={() => { cancelledRef.current = true; setCancelling(true); }}
+              onClick={() => {
+                cancelledRef.current = true;
+                setCancelling(true);
+              }}
             >
               {cancelling ? "Cancelling…" : "Cancel"}
             </Button>
